@@ -1,6 +1,10 @@
 module Main (main) where
 
-import Universum
+import           Universum
+
+import           Options   (Opts (..), getNodeOptions)
 
 main :: IO ()
-main = putText "TODO INIT"
+main = do
+    a@Opts{..} <- getNodeOptions
+    print a

@@ -1,4 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell  #-}
+
 -- | Options parser
 
 module Options
@@ -7,12 +9,13 @@ module Options
        ) where
 
 import           Data.Char                          (toLower, toUpper)
+import qualified Data.Text                          as T
 import           Data.Version                       (showVersion)
 import           Options.Applicative                (ReadM, eitherReader)
 import           Options.Applicative.Simple         (Parser, auto, help, long, metavar,
                                                      option, short, showDefault,
-                                                     simpleOptions, strOption, switch,
-                                                     value)
+                                                     simpleOptions, simpleVersion,
+                                                     strOption, switch, value)
 import           System.Directory                   (getHomeDirectory)
 import           System.FilePath                    ((</>))
 import           System.Wlog.Severity               (Severity (..))
@@ -63,7 +66,7 @@ getOptions = do
     homeDir <- getHomeDirectory
     (res, ()) <-
         simpleOptions
-            ("cardano-report-server-" <> showVersion version)
+            ("cardano-report-server, " <> $(simpleVersion version))
             "CardanoSL report server"
             "CardanoSL reporting server daemon"
             (optsParser homeDir)

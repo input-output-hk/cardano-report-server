@@ -2,9 +2,9 @@ module Main (main) where
 
 import           Universum
 
-import           Options   (Opts (..), getNodeOptions)
+import           Options   (Opts (..), getOptions)
 
 main :: IO ()
 main = do
-    a@Opts{..} <- getNodeOptions
+    a@Opts{..} <- getOptions
     print a

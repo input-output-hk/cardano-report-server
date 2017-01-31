@@ -3,7 +3,7 @@
 
 module Options
        ( Opts (..)
-       , getNodeOptions
+       , getOptions
        ) where
 
 import           Data.Char                          (toLower, toUpper)
@@ -58,8 +58,8 @@ optsParser homeDir =
         (long "severity" <> metavar "SEVERITY" <> value Info <>
          help "Logging severity")
 
-getNodeOptions :: IO Opts
-getNodeOptions = do
+getOptions :: IO Opts
+getOptions = do
     homeDir <- getHomeDirectory
     (res, ()) <-
         simpleOptions

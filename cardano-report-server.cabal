@@ -23,8 +23,8 @@ executable cardano-report-server
                      , bytestring >= 0.10.8.1
                      , directory >= 1.2.6.2
                      , exceptions >= 0.8.3
-                     , filepath >= 1.4.1.0
                      , filelock >= 0.1.0.1
+                     , filepath >= 1.4.1.0
                      , http-types >= 0.9.1
                      , lens >= 4.14
                      , log-warper >= 0.3
@@ -35,6 +35,8 @@ executable cardano-report-server
                      , text >= 1.2.2.1
                      , time >= 1.6.0.1
                      , universum >= 0.2.1
+                     , wai-extra >= 3.0.19
+                     , warp >= 3.2.9
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
   default-extensions:  GeneralizedNewtypeDeriving

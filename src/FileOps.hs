@@ -83,15 +83,18 @@ initHolder dir = liftIO $ do
 -- logs dir, dump files there and place an entry to index.
 addEntry :: (MonadIO m) => MVar LogsHolder -> [(Text, Text)] -> m ()
 addEntry holder files = liftIO $ modifyMVar_ holder $ \l@LogsHolder{..} -> do
+    putText "Adding entry 0"
     timestamp <-
         formatTime defaultTimeLocale dateFormat <$>
         getCurrentTime
     let dirname = "logs_" <> timestamp
-    let entry = T.intercalate "," $
-            [show lhLastIx, T.pack timestamp, T.pack dirname]
-    createDirectory dirname
+    let fullDirname = lhDir </> dirname
+    let entry =
+            T.intercalate ","
+            ([show lhLastIx, T.pack timestamp, T.pack dirname])
+            <> "\n"
+    createDirectory fullDirname
     forM_ files $ \(fname,content) ->
-        TIO.writeFile (dirname </> T.unpack fname) content
-    withFileWriteLifted lhIndex $ do
-        TIO.appendFile lhIndex entry
+        TIO.writeFile (fullDirname </> T.unpack fname) content
+    withFileWriteLifted lhIndex $ TIO.appendFile lhIndex entry
     pure LogsHolder{ lhLastIx = lhLastIx + 1, .. }

@@ -41,7 +41,7 @@ dateFormat = "%F_%T_%Z"
 data LogsHolder = LogsHolder
     { lhDir    :: FilePath
     , lhIndex  :: FilePath
-    , lhLastIx :: Int
+    , lhLastIx :: MVar Int
     }
 
 -- | Parses single line of index -- returns index id, time item created
@@ -65,7 +65,7 @@ parseIndexEntry line = case T.splitOn "," line of
 initHolder :: (MonadIO m) => FilePath -> m LogsHolder
 initHolder dir = liftIO $ do
     createDirectoryIfMissing True dir
-    lastIx <- ifM (doesFileExist filePath) onExist onCreate
+    lastIx <- newMVar =<< ifM (doesFileExist filePath) onExist onCreate
     pure $ LogsHolder dir filePath lastIx
   where
     filePath = dir </> indexFileName
@@ -81,20 +81,21 @@ initHolder dir = liftIO $ do
 
 -- | Given logs holder and list of (filename,content), create a new
 -- logs dir, dump files there and place an entry to index.
-addEntry :: (MonadIO m) => MVar LogsHolder -> [(Text, Text)] -> m ()
-addEntry holder files = liftIO $ modifyMVar_ holder $ \l@LogsHolder{..} -> do
+addEntry :: (MonadIO m) => LogsHolder -> [(Text, Text)] -> m ()
+addEntry LogsHolder{..} files = liftIO $ do
     putText "Adding entry 0"
     timestamp <-
         formatTime defaultTimeLocale dateFormat <$>
         getCurrentTime
     let dirname = "logs_" <> timestamp
     let fullDirname = lhDir </> dirname
-    let entry =
-            T.intercalate ","
-            ([show lhLastIx, T.pack timestamp, T.pack dirname])
-            <> "\n"
     createDirectory fullDirname
     forM_ files $ \(fname,content) ->
         TIO.writeFile (fullDirname </> T.unpack fname) content
-    withFileWriteLifted lhIndex $ TIO.appendFile lhIndex entry
-    pure LogsHolder{ lhLastIx = lhLastIx + 1, .. }
+    modifyMVar_ lhLastIx $ \i -> do
+        let entry =
+                T.intercalate ","
+                ([show i, T.pack timestamp, T.pack dirname])
+                <> "\n"
+        withFileWriteLifted lhIndex $ TIO.appendFile lhIndex entry
+        pure $ i + 1

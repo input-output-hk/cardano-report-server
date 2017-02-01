@@ -20,7 +20,7 @@ main :: IO ()
 main = do
     a@Opts{..} <- getOptions
     putText $ "Started with options: " <> show a
-    holderVar <- newMVar =<< initHolder logsDir
+    holderVar <- initHolder logsDir
     putText "Successfully created holder"
 
     app <- scottyApp $ do

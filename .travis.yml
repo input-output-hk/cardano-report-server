@@ -8,6 +8,7 @@ addons:
   apt:
     packages:
     - zlib1g-dev
+    - libgmp3-dev
 before_install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH

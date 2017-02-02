@@ -8,23 +8,18 @@ module Options
        , getOptions
        ) where
 
-import           Data.Char                          (toLower, toUpper)
-import qualified Data.Text                          as T
-import           Data.Version                       (showVersion)
-import           Options.Applicative                (ReadM, eitherReader)
-import           Options.Applicative.Simple         (Parser, auto, help, long, metavar,
-                                                     option, short, showDefault,
-                                                     simpleOptions, simpleVersion,
-                                                     strOption, switch, value)
-import           System.Directory                   (getHomeDirectory)
-import           System.FilePath                    ((</>))
-import           System.Wlog.Severity               (Severity (..))
-import qualified Text.Parsec                        as P
-import           Text.ParserCombinators.Parsec      (many1, try)
-import qualified Text.ParserCombinators.Parsec.Char as P
+import           Data.Char                   (toLower, toUpper)
+import           Options.Applicative         (ReadM, eitherReader)
+import           Options.Applicative.Simple  (Parser, auto, help, long, metavar, option,
+                                              short, simpleOptions, simpleVersion,
+                                              strOption, value)
+import           System.Directory            (getHomeDirectory)
+import           System.FilePath             ((</>))
+import           System.Wlog.Severity        (Severity (..))
+import qualified Text.Parsec                 as P
 import           Universum
 
-import           Paths_cardano_report_server        (version)
+import           Paths_cardano_report_server (version)
 
 data Opts = Opts
     { port     :: Int

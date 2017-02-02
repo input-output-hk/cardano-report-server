@@ -16,10 +16,14 @@ cabal-version:       >=1.10
 executable cardano-report-server
   hs-source-dirs:      src
   main-is:             Main.hs
-  other-modules:       Options
+  other-modules:       Exception
                      , FileOps
+                     , Options
+                     , Report
                      , Util
-  build-depends:       base >= 4.9.0.0 && < 5.0.0.0
+  build-depends:       aeson >= 0.11.2.1
+                     , aeson-pretty >= 0.8.2
+                     , base >= 4.9.0.0 && < 5.0.0.0
                      , bytestring >= 0.10.8.1
                      , directory >= 1.2.6.2
                      , exceptions >= 0.8.3
@@ -27,17 +31,21 @@ executable cardano-report-server
                      , filepath >= 1.4.1.0
                      , http-types >= 0.9.1
                      , lens >= 4.14
+                     , lifted-base >= 0.2.3.8
                      , log-warper >= 0.3
+                     , monad-control >= 1.0.1.0
+                     , mtl >= 2.2.1
                      , optparse-applicative >= 0.12.1.0
                      , optparse-simple >= 0.0.3
                      , parsec >= 3.1.10
                      , scotty >= 0.11.0
                      , text >= 1.2.2.1
                      , time >= 1.6.0.1
+                     , transformers >= 0.5.2.0
                      , universum >= 0.2.1
                      , wai-extra >= 3.0.19
                      , warp >= 3.2.9
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   default-language:    Haskell2010
   default-extensions:  GeneralizedNewtypeDeriving
                        StandaloneDeriving

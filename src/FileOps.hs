@@ -3,14 +3,12 @@
 -- | File/directory operations on logs.
 
 module FileOps
-       ( StorageException (..)
-       , LogsHolder (..)
+       ( LogsHolder (..)
        , initHolder
        , addEntry
        ) where
 
 import           Control.Concurrent  (MVar)
-import           Control.Lens        (makeLenses)
 import           Control.Monad.Catch (throwM)
 import qualified Data.List.NonEmpty  as NE
 import qualified Data.Text           as T
@@ -19,18 +17,12 @@ import           Data.Time           (UTCTime, getCurrentTime)
 import           Data.Time.Format    (defaultTimeLocale, formatTime, parseTimeM)
 import           System.Directory    (createDirectory, createDirectoryIfMissing,
                                       doesFileExist)
-import           System.FileLock     (FileLock)
 import           System.FilePath     ((</>))
 import           Universum
 
-import           Util                (withFileReadLifted, withFileWriteLifted)
+import           Exception           (ReportServerException (MalformedIndex))
+import           Util                (withFileWriteLifted)
 
-
-data StorageException =
-    MalformedIndexException Text
-    deriving (Show)
-
-instance Exception StorageException
 
 indexFileName :: FilePath
 indexFileName = "index.log"
@@ -62,27 +54,27 @@ parseIndexEntry line = case T.splitOn "," line of
     mToE reason  =  maybe (Left reason) Right
 
 -- | Initializes logs holder -- opens file, creates index.
-initHolder :: (MonadIO m) => FilePath -> m LogsHolder
-initHolder dir = liftIO $ do
+initHolder :: FilePath -> IO LogsHolder
+initHolder dir = do
     createDirectoryIfMissing True dir
     lastIx <- newMVar =<< ifM (doesFileExist filePath) onExist onCreate
     pure $ LogsHolder dir filePath lastIx
   where
     filePath = dir </> indexFileName
     onExist = do
-        lines <- T.lines <$> TIO.readFile filePath
-        case NE.nonEmpty lines of
+        tlines <- T.lines <$> TIO.readFile filePath
+        case NE.nonEmpty tlines of
             Nothing -> onCreate
             Just ne ->
                 either failInit (pure . view _1) $
                 parseIndexEntry $ NE.last ne
     onCreate = TIO.writeFile filePath "" $> 0
-    failInit = throwM . MalformedIndexException
+    failInit = throwM . MalformedIndex
 
 -- | Given logs holder and list of (filename,content), create a new
 -- logs dir, dump files there and place an entry to index.
-addEntry :: (MonadIO m) => LogsHolder -> [(Text, Text)] -> m ()
-addEntry LogsHolder{..} files = liftIO $ do
+addEntry :: LogsHolder -> [(Text, Text)] -> IO ()
+addEntry LogsHolder{..} files = do
     putText "Adding entry 0"
     timestamp <-
         formatTime defaultTimeLocale dateFormat <$>

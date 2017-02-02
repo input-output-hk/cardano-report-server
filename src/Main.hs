@@ -16,7 +16,6 @@ import qualified Network.Wai.Handler.Warp             as Warp
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import           Network.Wai.Parse                    (fileContent)
 import           Universum
-import qualified Web.Scotty.Internal.Types            as S
 import           Web.Scotty.Trans                     (files, notFound, param, post,
                                                        raise, status, text)
 import qualified Web.Scotty.Trans                     as S

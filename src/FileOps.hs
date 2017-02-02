@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 -- | File/directory operations on logs.
 
@@ -18,6 +19,7 @@ import           Data.Time.Format    (defaultTimeLocale, formatTime, parseTimeM)
 import           System.Directory    (createDirectory, createDirectoryIfMissing,
                                       doesFileExist)
 import           System.FilePath     ((</>))
+import           System.Random       (randomRIO)
 import           Universum
 
 import           Exception           (ReportServerException (MalformedIndex))
@@ -79,7 +81,8 @@ addEntry LogsHolder{..} files = do
     timestamp <-
         formatTime defaultTimeLocale dateFormat <$>
         getCurrentTime
-    let dirname = "logs_" <> timestamp
+    (nonce :: Integer) <- randomRIO (0, 100000000)
+    let dirname = "logs_" <> timestamp <> "_" <> show nonce
     let fullDirname = lhDir </> dirname
     createDirectory fullDirname
     forM_ files $ \(fname,content) ->

@@ -53,7 +53,7 @@ parseIndexEntry line = case T.splitOn "," line of
         pure $ (ix, time, fpath)
     _ -> Left $ "Expected csv with 3 argument, got: " <> line
   where
-    mToE reason  =  maybe (Left reason) Right
+    mToE reason = maybe (Left reason) Right
 
 -- | Initializes logs holder -- opens file, creates index.
 initHolder :: FilePath -> IO LogsHolder
@@ -68,7 +68,7 @@ initHolder dir = do
         case NE.nonEmpty tlines of
             Nothing -> onCreate
             Just ne ->
-                either failInit (pure . view _1) $
+                either failInit (pure . succ . view _1) $
                 parseIndexEntry $ NE.last ne
     onCreate = TIO.writeFile filePath "" $> 0
     failInit = throwM . MalformedIndex
@@ -77,7 +77,6 @@ initHolder dir = do
 -- logs dir, dump files there and place an entry to index.
 addEntry :: LogsHolder -> [(Text, Text)] -> IO ()
 addEntry LogsHolder{..} files = do
-    putText "Adding entry 0"
     timestamp <-
         formatTime defaultTimeLocale dateFormat <$>
         getCurrentTime

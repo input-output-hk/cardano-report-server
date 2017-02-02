@@ -1,6 +1,6 @@
 -- | Utilities
 
-module Util
+module Pos.ReportServer.Util
        ( withFileReadLifted
        , withFileWriteLifted
        ) where

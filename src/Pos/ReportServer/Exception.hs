@@ -6,7 +6,7 @@
 
 -- | Local exception hierarchy.
 
-module Exception
+module Pos.ReportServer.Exception
     ( ReportServerException(..)
     , tryAll
     ) where

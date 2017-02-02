@@ -2,7 +2,7 @@
 
 -- | Log report datatype & related.
 
-module Report
+module Pos.ReportServer.Report
        ( ReportType(..)
        , ReportInfo(..)
        ) where

@@ -3,27 +3,27 @@
 
 -- | File/directory operations on logs.
 
-module FileOps
+module Pos.ReportServer.FileOps
        ( LogsHolder (..)
        , initHolder
        , addEntry
        ) where
 
-import           Control.Concurrent  (MVar)
-import           Control.Monad.Catch (throwM)
-import qualified Data.List.NonEmpty  as NE
-import qualified Data.Text           as T
-import qualified Data.Text.IO        as TIO
-import           Data.Time           (UTCTime, getCurrentTime)
-import           Data.Time.Format    (defaultTimeLocale, formatTime, parseTimeM)
-import           System.Directory    (createDirectory, createDirectoryIfMissing,
-                                      doesFileExist)
-import           System.FilePath     ((</>))
-import           System.Random       (randomRIO)
+import           Control.Concurrent         (MVar)
+import           Control.Monad.Catch        (throwM)
+import qualified Data.List.NonEmpty         as NE
+import qualified Data.Text                  as T
+import qualified Data.Text.IO               as TIO
+import           Data.Time                  (UTCTime, getCurrentTime)
+import           Data.Time.Format           (defaultTimeLocale, formatTime, parseTimeM)
+import           System.Directory           (createDirectory, createDirectoryIfMissing,
+                                             doesFileExist)
+import           System.FilePath            ((</>))
+import           System.Random              (randomRIO)
 import           Universum
 
-import           Exception           (ReportServerException (MalformedIndex))
-import           Util                (withFileWriteLifted)
+import           Pos.ReportServer.Exception (ReportServerException (MalformedIndex))
+import           Pos.ReportServer.Util      (withFileWriteLifted)
 
 
 indexFileName :: FilePath

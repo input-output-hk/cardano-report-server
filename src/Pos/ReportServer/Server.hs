@@ -4,6 +4,7 @@
 
 module Pos.ReportServer.Server
        ( reportServerApp
+       , limitBodySize
        ) where
 
 import           Control.Monad.Trans.Control (MonadBaseControl)
@@ -14,7 +15,9 @@ import           Data.List                   ((\\))
 import qualified Data.Text                   as T
 import qualified Data.Text.Encoding          as TE (decodeUtf8)
 import qualified Data.Text.Lazy              as LT
-import           Network.HTTP.Types.Status   (status200, status404)
+import           Network.HTTP.Types.Status   (status200, status404, status413)
+import           Network.Wai                 (Middleware, RequestBodyLength (..),
+                                              requestBodyLength, responseLBS)
 import           Network.Wai.Parse           (fileContent)
 import           Universum
 import           Web.Scotty.Trans            (files, notFound, param, post, raise, status,
@@ -25,6 +28,22 @@ import           Pos.ReportServer.Exception  (ReportServerException (BadRequest)
 import           Pos.ReportServer.FileOps    (LogsHolder, addEntry)
 import           Pos.ReportServer.Report     (ReportInfo (..))
 
+
+limitBodySize :: Word64 -> Middleware
+limitBodySize limit application request responseHandler =
+    if exceeds
+        then onExceeds
+        else application request responseHandler
+  where
+    exceeds =
+        case requestBodyLength request of
+            ChunkedBody   -> False
+            KnownLength l -> l > limit
+    onExceeds =
+        responseHandler $ responseLBS
+            status413
+            [("Content-Type", "text/plain")]
+            "Request body too large to be processed."
 
 liftAndCatchIO
     :: (MonadIO m, MonadCatch m, MonadBaseControl IO m)

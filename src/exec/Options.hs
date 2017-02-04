@@ -22,9 +22,10 @@ import           Universum
 import           Paths_cardano_report_server (version)
 
 data Opts = Opts
-    { port     :: Int
-    , logsDir  :: FilePath
-    , severity :: Severity
+    { port      :: Int
+    , logsDir   :: FilePath
+    , severity  :: Severity
+    , sizeLimit :: Word64
     } deriving (Show)
 
 fromParsec :: P.Parsec [Char] () a -> ReadM a
@@ -54,7 +55,12 @@ optsParser homeDir =
     option
         (fromParsec severityParser)
         (long "severity" <> metavar "SEVERITY" <> value Info <>
-         help "Logging severity")
+         help "Logging severity") <*>
+   option
+        auto
+        (long "size-limit" <> metavar "BYTES" <> value (5 * 1024 * 1024) <>
+         help "Maximum body size allowed (will send 413 responses if bigger)")
+
 
 getOptions :: IO Opts
 getOptions = do

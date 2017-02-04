@@ -11,8 +11,7 @@ import qualified Web.Scotty.Trans                     as S
 
 import           Options                              (Opts (..), getOptions)
 import           Pos.ReportServer.FileOps             (initHolder)
-import           Pos.ReportServer.Server              (reportServerApp)
-
+import           Pos.ReportServer.Server              (limitBodySize, reportServerApp)
 
 main :: IO ()
 main = do
@@ -23,4 +22,4 @@ main = do
 
     putText "Launching server..."
     application <- S.scottyAppT liftIO $ reportServerApp holder
-    Warp.run port $ logStdoutDev application
+    Warp.run port $ logStdoutDev $ limitBodySize sizeLimit $ application

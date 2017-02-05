@@ -23,7 +23,7 @@ import           Universum
 data ReportType
     = RCrash Int
     | RError Text
-    | RMissbehaviour Text
+    | RMisbehavior Text
     deriving (Show,Eq)
 
 -- | Info medetadata sent with report
@@ -41,7 +41,7 @@ instance FromJSON ReportType where
     parseJSON (Object v) = (v .: "type") >>= \case
         String "crash" -> RCrash <$> v .: "errno"
         String "error" -> RError <$> v .: "message"
-        String "missbehaviour" -> RMissbehaviour <$> v .: "reason"
+        String "misbehavior" -> RMisbehavior <$> v .: "reason"
         String unknown ->
             fail $ T.unpack $ "ReportType: report 'type' " <> unknown <> " is unknown"
         other  -> typeMismatch "ReportType.type: should be string" other
@@ -55,8 +55,8 @@ instance ToJSON ReportType where
     toJSON (RCrash errno) = object ["type" .= idt "crash", "errno" .= errno]
     toJSON (RError message) =
         object ["type" .= idt "error", "message" .= message]
-    toJSON (RMissbehaviour reason) =
-        object ["type" .= idt "missbehaviour", "reason" .= reason]
+    toJSON (RMisbehavior reason) =
+        object ["type" .= idt "misbehavior", "reason" .= reason]
 
 supportedApps :: [Text]
 supportedApps = ["daedalus", "cardano-node"]

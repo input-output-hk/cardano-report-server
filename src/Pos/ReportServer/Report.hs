@@ -34,6 +34,7 @@ data ReportInfo = ReportInfo
     , rOS          :: Text
     , rLogs        :: [Text]
     , rDate        :: UTCTime
+    , rMagic       :: Int32
     , rReportType  :: ReportType
     } deriving (Show,Eq)
 
@@ -87,6 +88,7 @@ instance FromJSON ReportInfo where
         when (T.length rOS > 100) $ fail "OS field length cant be longer than 100 chars"
         rLogs <- v .: "logs"
         rDateStr <- v .: "date"
+        rMagic <- v .: "magic"
         let failParseDate reason =
                 fail $ "Can't parse date, should be in iso8601 format: " <>
                 iso8601DateTimeFormat <> ", reason: " <> reason
@@ -103,6 +105,7 @@ instance ToJSON ReportInfo where
             , "version" .= showVersion rVersion
             , "build" .= rBuild
             , "os" .= rOS
+            , "magic" .= rMagic
             , "logs" .= rLogs
             , "date" .= formatTime defaultTimeLocale iso8601DateTimeFormat rDate
             , "type" .= rReportType

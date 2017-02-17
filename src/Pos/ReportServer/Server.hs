@@ -8,7 +8,7 @@ module Pos.ReportServer.Server
        ) where
 
 import           Control.Monad.Trans.Control (MonadBaseControl)
-import           Data.Aeson                  (eitherDecode)
+import           Data.Aeson                  (ToJSON, eitherDecode)
 import           Data.Aeson.Encode.Pretty    (encodePretty)
 import qualified Data.ByteString.Lazy        as BSL
 import           Data.List                   ((\\))
@@ -24,6 +24,7 @@ import           Web.Scotty.Trans            (files, notFound, param, post, rais
                                               text)
 import qualified Web.Scotty.Trans            as S
 
+import           Pos.ReportServer.ClientInfo (getClientInfo)
 import           Pos.ReportServer.Exception  (ReportServerException (BadRequest), tryAll)
 import           Pos.ReportServer.FileOps    (LogsHolder, addEntry)
 import           Pos.ReportServer.Report     (ReportInfo (..))
@@ -61,13 +62,15 @@ reportServerApp holder = do
         let missingLogs = rLogs payload \\ map fst logFiles
         unless (null missingLogs) $ failMissingLogs missingLogs
         let neededLogs = filter ((`elem` rLogs payload) . fst) logFiles
-        let payloadFile =
-                ( "payload.json"
-                , TE.decodeUtf8 $ BSL.toStrict (encodePretty payload))
-        liftAndCatchIO $ addEntry holder $ payloadFile : neededLogs
+        let payloadFile = ("payload.json", prettifyJson payload)
+        cInfo <- getClientInfo
+        let clientInfoFile = ("client.info", prettifyJson cInfo)
+        liftAndCatchIO $ addEntry holder $ payloadFile : clientInfoFile : neededLogs
         status status200
     notFound err404
   where
+    prettifyJson :: (ToJSON a) => a -> Text
+    prettifyJson = TE.decodeUtf8 . BSL.toStrict . encodePretty
     err404 = status status404 >> text "Not found"
     failMissingLogs missing =
         raise $ BadRequest $ "Logs mentioned in payload were not attached: " <> show missing

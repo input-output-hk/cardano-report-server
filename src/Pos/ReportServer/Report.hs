@@ -4,6 +4,7 @@
 
 module Pos.ReportServer.Report
        ( ReportType(..)
+       , supportedApps
        , ReportInfo(..)
        ) where
 

@@ -9,7 +9,9 @@ module Pos.ReportServer.FileOps
        , addEntry
        ) where
 
-import           Control.Concurrent         (MVar)
+import           Universum
+
+import           Control.Concurrent         (modifyMVar_)
 import           Control.Monad.Catch        (throwM)
 import qualified Data.List.NonEmpty         as NE
 import qualified Data.Text                  as T
@@ -20,7 +22,6 @@ import           System.Directory           (createDirectory, createDirectoryIfM
                                              doesFileExist)
 import           System.FilePath            ((</>))
 import           System.Random              (randomRIO)
-import           Universum
 
 import           Pos.ReportServer.Exception (ReportServerException (MalformedIndex))
 import           Pos.ReportServer.Util      (withFileWriteLifted)

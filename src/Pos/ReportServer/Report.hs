@@ -25,6 +25,7 @@ data ReportType
     = RCrash Int
     | RError Text
     | RMisbehavior Text
+    | RInfo Text
     deriving (Show,Eq)
 
 -- | Info medetadata sent with report
@@ -44,6 +45,7 @@ instance FromJSON ReportType where
         String "crash" -> RCrash <$> v .: "errno"
         String "error" -> RError <$> v .: "message"
         String "misbehavior" -> RMisbehavior <$> v .: "reason"
+        String "info" -> RMisbehavior <$> v .: "description"
         String unknown ->
             fail $ T.unpack $ "ReportType: report 'type' " <> unknown <> " is unknown"
         other  -> typeMismatch "ReportType.type: should be string" other
@@ -59,6 +61,7 @@ instance ToJSON ReportType where
         object ["type" .= idt "error", "message" .= message]
     toJSON (RMisbehavior reason) =
         object ["type" .= idt "misbehavior", "reason" .= reason]
+    toJSON (RInfo descr) = object ["type" .= idt "info", "description" .= descr]
 
 supportedApps :: [Text]
 supportedApps = ["daedalus", "cardano-node"]

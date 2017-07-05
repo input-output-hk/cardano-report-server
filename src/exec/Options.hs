@@ -11,8 +11,7 @@ module Options
 import           Data.Char                   (toLower, toUpper)
 import           Options.Applicative         (ReadM, eitherReader)
 import           Options.Applicative.Simple  (Parser, auto, help, long, metavar, option,
-                                              short, simpleOptions, simpleVersion,
-                                              strOption, value)
+                                              short, simpleOptions, strOption, value)
 import           System.Directory            (getHomeDirectory)
 import           System.FilePath             ((</>))
 import           System.Wlog.Severity        (Severity (..))
@@ -67,7 +66,7 @@ getOptions = do
     homeDir <- getHomeDirectory
     (res, ()) <-
         simpleOptions
-            ("cardano-report-server, " <> $(simpleVersion version))
+            ("cardano-report-server version " <> show version)
             "CardanoSL report server"
             "CardanoSL reporting server daemon"
             (optsParser homeDir)

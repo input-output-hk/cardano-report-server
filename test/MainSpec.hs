@@ -39,8 +39,9 @@ instance Arbitrary ReportType where
     arbitrary = do
         let crashA = RCrash <$> choose (0,1000)
         let errorA = RError <$> arbitrary
-        let misbehA = RMisbehavior <$> arbitrary
-        oneof [crashA, errorA, misbehA]
+        let misbehA = RMisbehavior <$> arbitrary <*> arbitrary
+        let infoA = RInfo <$> arbitrary
+        oneof [crashA, errorA, misbehA, infoA]
 
 instance Arbitrary ReportInfo where
     arbitrary = do

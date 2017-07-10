@@ -23,10 +23,30 @@ import           Universum
 -- | Type of report
 data ReportType
     = RCrash Int
+    -- ^ This type is used only to report crash of application.
     | RError Text
-    | RMisbehavior Text
+    -- ^ The type of report used when a local error (most likely
+    -- assertion violation or anything else that indicates a bug)
+    -- happens. «Local» means that error most likely affects only one
+    -- node for which this error happened.
+    | RMisbehavior { rmIsCritical  :: Bool
+                   -- ^ Whether misbehavior can break the system and
+                   -- must be addressed ASAP.  Example of critical
+                   -- misbehavior: chain quality is closed to
+                   -- 50%. Example of non-critical misbehavior: fork
+                   -- happened in bootstrap era. The latter should be
+                   -- investigated, but doesn't mean that the system's
+                   -- operability is threatened.
+                   , rmDescription :: Text
+                   -- ^ What exactly is suspicious\/wrong.
+                    }
+    -- ^ This type of report indicates global problems which most
+    -- likely affect all nodes.
     | RInfo Text
-    deriving (Show,Eq)
+    -- ^ The type of report used to send statistical or any other
+    -- useful information and doesn't indicate anything
+    -- bad\/strange\/suspicious.
+    deriving (Show, Eq)
 
 -- | Info medetadata sent with report
 data ReportInfo = ReportInfo
@@ -44,10 +64,10 @@ instance FromJSON ReportType where
     parseJSON (Object v) = (v .: "type") >>= \case
         String "crash" -> RCrash <$> v .: "errno"
         String "error" -> RError <$> v .: "message"
-        String "misbehavior" -> RMisbehavior <$> v .: "reason"
-        String "info" -> RMisbehavior <$> v .: "description"
+        String "misbehavior" -> RMisbehavior <$> v .: "isCritical" <*> v .: "reason"
+        String "info" -> RInfo <$> v .: "description"
         String unknown ->
-            fail $ T.unpack $ "ReportType: report 'type' " <> unknown <> " is unknown"
+            fail $ toString $ "ReportType: report 'type' " <> unknown <> " is unknown"
         other  -> typeMismatch "ReportType.type: should be string" other
     parseJSON invalid    = typeMismatch "ReportType" invalid
 
@@ -59,8 +79,12 @@ instance ToJSON ReportType where
     toJSON (RCrash errno) = object ["type" .= idt "crash", "errno" .= errno]
     toJSON (RError message) =
         object ["type" .= idt "error", "message" .= message]
-    toJSON (RMisbehavior reason) =
-        object ["type" .= idt "misbehavior", "reason" .= reason]
+    toJSON (RMisbehavior isCritical reason) =
+        object
+            [ "type" .= idt "misbehavior"
+            , "isCritical" .= isCritical
+            , "reason" .= reason
+            ]
     toJSON (RInfo descr) = object ["type" .= idt "info", "description" .= descr]
 
 supportedApps :: [Text]

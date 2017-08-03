@@ -21,5 +21,5 @@ main = do
     putText "Successfully created holder"
 
     putText "Launching server..."
-    application <- S.scottyAppT liftIO $ reportServerApp holder
+    let application = reportServerApp holder
     Warp.run port $ logStdoutDev $ limitBodySize sizeLimit $ application

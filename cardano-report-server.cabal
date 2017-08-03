@@ -82,7 +82,6 @@ executable cardano-report-server
                      , optparse-simple >= 0.0.3
                      , parsec >= 3.1.10
                      , random >= 1.1
-                     , scotty >= 0.11.0
                      , universum >= 0.2.1
                      , wai-extra >= 3.0.19
                      , warp >= 3.2.9

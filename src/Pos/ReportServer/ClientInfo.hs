@@ -4,7 +4,7 @@
 
 module Pos.ReportServer.ClientInfo
        ( ClientInfo (..)
-       , getClientInfo
+       , clientInfo
        ) where
 
 import           Data.Aeson                (ToJSON (..), Value (Array, String), object,
@@ -18,9 +18,8 @@ import           Formatting.Formatters     (hex)
 import           Network.HTTP.Types.Header (Header)
 import           Network.Socket            (hostAddressToTuple)
 import           Network.Socket.Internal   (SockAddr (..))
-import           Network.Wai               (isSecure, remoteHost, requestHeaders)
+import           Network.Wai               (isSecure, remoteHost, requestHeaders, Request)
 import           Universum                 hiding (decodeUtf8)
-import           Web.Scotty.Internal.Types (ActionT (..), ScottyError, getReq)
 
 newtype SockAddrW = SockAddrW SockAddr
 newtype HeaderW = HeaderW Header
@@ -57,12 +56,9 @@ instance ToJSON ClientInfo where
     toJSON ClientInfo {..} =
         object ["addr" .= ciSockAddr, "ssl" .= ciSSL, "headers" .= ciHeaders]
 
--- | Retrieves client info from scotty 'ActionT' monad.
-getClientInfo :: (Monad m, ScottyError e) => ActionT e m ClientInfo
-getClientInfo = do
-    req <- getReq <$> ActionT ask
-    pure $
-        ClientInfo
+-- | Builds the `ClientInfo` from the incoming `Request`.
+clientInfo :: Request -> ClientInfo
+clientInfo req = ClientInfo
             (SockAddrW $ remoteHost req)
             (isSecure req)
             (map HeaderW $ requestHeaders req)

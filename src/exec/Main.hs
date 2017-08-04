@@ -7,7 +7,6 @@ module Main (main) where
 import qualified Network.Wai.Handler.Warp             as Warp
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import           Universum
-import qualified Web.Scotty.Trans                     as S
 
 import           Options                              (Opts (..), getOptions)
 import           Pos.ReportServer.FileOps             (initHolder)
@@ -21,5 +20,5 @@ main = do
     putText "Successfully created holder"
 
     putText "Launching server..."
-    application <- S.scottyAppT liftIO $ reportServerApp holder
+    let application = reportServerApp holder
     Warp.run port $ logStdoutDev $ limitBodySize sizeLimit $ application

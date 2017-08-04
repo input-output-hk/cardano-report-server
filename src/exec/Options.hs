@@ -9,9 +9,13 @@ module Options
        ) where
 
 import           Data.Char                   (toLower, toUpper)
-import           Options.Applicative         (ReadM, eitherReader)
-import           Options.Applicative.Simple  (Parser, auto, help, long, metavar, option,
-                                              short, simpleOptions, strOption, value)
+import           Options.Applicative         (Parser, ReadM, auto, eitherReader,
+                                              execParserPure, fullDesc,
+                                              handleParseResult, header, help,
+                                              helper, idm, info, infoOption,
+                                              long, metavar, option, prefs,
+                                              progDesc, short, strOption, value,
+                                              (<**>))
 import           System.Directory            (getHomeDirectory)
 import           System.FilePath             ((</>))
 import           System.Wlog.Severity        (Severity (..))
@@ -64,11 +68,10 @@ optsParser homeDir =
 getOptions :: IO Opts
 getOptions = do
     homeDir <- getHomeDirectory
-    (res, ()) <-
-        simpleOptions
-            ("cardano-report-server version " <> show version)
-            "CardanoSL report server"
-            "CardanoSL reporting server daemon"
-            (optsParser homeDir)
-            empty
-    return res
+    getArgs >>= handleParseResult . execParserPure (prefs idm) (parser homeDir)
+    where
+       parser homeDir = info (optsParser homeDir <**> helper <**> versionHelper) desc
+       desc = fullDesc <> header "CardanoSL report server" <> progDesc "CardanoSL reporting server daemon"
+       versionHelper =
+         infoOption ("cardano-report-server version " <> show version)
+                    (long "version" <> help "Show version")

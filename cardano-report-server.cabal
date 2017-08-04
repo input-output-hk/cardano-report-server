@@ -78,7 +78,6 @@ executable cardano-report-server
                      , monad-control >= 1.0.1.0
                      , mtl >= 2.2.1
                      , optparse-applicative >= 0.12.1.0
-                     , optparse-simple >= 0.0.3
                      , parsec >= 3.1.10
                      , random >= 1.1
                      , universum >= 0.2.1

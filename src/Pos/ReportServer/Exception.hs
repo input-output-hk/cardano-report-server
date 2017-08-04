@@ -11,8 +11,6 @@ module Pos.ReportServer.Exception
     , tryAll
     ) where
 
-import qualified Control.Exception.Lifted    as LiftedBase
-import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Universum
 
 data ReportServerException

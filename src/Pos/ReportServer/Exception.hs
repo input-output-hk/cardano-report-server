@@ -20,6 +20,8 @@ data ReportServerException
       -- ^ Internal storage is malformed
     | FromTextException [Char]
       -- ^ Port of scotty String exceptions
+    | ParameterNotFound Text
+      -- ^ Cannot find the parameter `key` in the params of the `Request`
     | ExternalException SomeException
       -- ^ All other exceptions
     deriving (Show)

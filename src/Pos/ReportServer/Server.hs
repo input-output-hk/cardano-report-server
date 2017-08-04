@@ -8,7 +8,7 @@ module Pos.ReportServer.Server
        , limitBodySize
        ) where
 
-import           Control.Exception           (displayException)
+import           Control.Exception           (displayException, throwIO)
 import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Data.Aeson                  (ToJSON, eitherDecodeStrict)
 import           Data.Aeson.Encode.Pretty    (encodePretty)
@@ -31,7 +31,7 @@ import           Network.Wai.UrlMap          (mapUrls, mount, mountRoot)
 import           Universum
 
 import           Pos.ReportServer.ClientInfo (clientInfo)
-import           Pos.ReportServer.Exception  (ReportServerException (BadRequest),
+import           Pos.ReportServer.Exception  (ReportServerException (BadRequest, ParameterNotFound),
                                               tryAll)
 import           Pos.ReportServer.FileOps    (LogsHolder, addEntry)
 import           Pos.ReportServer.Report     (ReportInfo (..))
@@ -67,9 +67,12 @@ bodyParse request = do
     let parseBodyOptions = defaultParseRequestBodyOptions
     parseRequestBodyEx parseBodyOptions lbsBackEnd request
 
--- Tries to retrieve the `ReportInfo` from the raw `Request`.
-param :: ByteString -> [Param] -> ByteString
-param key = fromMaybe mempty . lookup key
+-- Tries to retrieve the `ReportInfo` from the raw `Request`, throwing an exception if
+-- the parameter cannot be found.
+param :: ByteString -> [Param] -> IO ByteString
+param key ps = case lookup key ps of
+    Just val -> return val
+    Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
 reportApp :: LogsHolder -> Application
 reportApp holder req respond =
@@ -77,7 +80,7 @@ reportApp holder req respond =
         Right POST -> do
           (params, files) <- bodyParse req
           (payload :: ReportInfo) <-
-              either failPayload pure . eitherDecodeStrict =<< return (param "payload" params)
+              either failPayload pure . eitherDecodeStrict =<< param "payload" params
           let logFiles = map (bimap decodeUtf8 $ TE.decodeUtf8 . BSL.toStrict . fileContent) files
           let missingLogs = rLogs payload \\ map fst logFiles
           unless (null missingLogs) $ failMissingLogs missingLogs

@@ -12,7 +12,6 @@ module Pos.ReportServer.FileOps
 import           Universum
 
 import           Control.Concurrent         (modifyMVar_)
-import           Control.Monad.Catch        (throwM)
 import qualified Data.List.NonEmpty         as NE
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO

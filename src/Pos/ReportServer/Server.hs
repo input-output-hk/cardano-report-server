@@ -28,6 +28,7 @@ import           Network.Wai.Parse           (File, Param,
                                               fileContent, lbsBackEnd,
                                               parseRequestBodyEx)
 import           Network.Wai.UrlMap          (mapUrls, mount, mountRoot)
+import           System.IO                   (hPutStrLn)
 import           Universum
 
 import           Pos.ReportServer.ClientInfo (clientInfo)
@@ -90,8 +91,12 @@ reportApp holder req respond =
           let clientInfoFile = ("client.info", prettifyJson cInfo)
           res <- liftAndCatchIO $ addEntry holder $ payloadFile : clientInfoFile : neededLogs
           case res of
-              Left e -> respond (with500Response (toText $ displayException e) req)
-              _      -> respond (with200Response req)
+              Right _ ->
+                  respond (with200Response req)
+              Left e -> do
+                  let ex = displayException e
+                  hPutStrLn stderr ("An exception occurred: " <> ex)
+                  respond (with500Response (toText ex) req)
         _  -> respond (with404Response req)
   where
     prettifyJson :: (ToJSON a) => a -> Text

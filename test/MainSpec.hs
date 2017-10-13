@@ -16,8 +16,8 @@ import           Data.Version            (Version (..))
 import           Test.Hspec              (Spec, describe)
 import           Test.Hspec.QuickCheck   (prop)
 import           Test.QuickCheck         (Arbitrary (arbitrary), Gen, choose,
-                                          counterexample, elements, getPositive, listOf,
-                                          listOf1, oneof, scale, (===))
+                                          counterexample, elements, getPositive, listOf1,
+                                          oneof, scale, (===))
 import           Universum
 
 import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..), supportedApps)
@@ -49,10 +49,9 @@ instance Arbitrary ReportInfo where
         rVersion <-
             Version <$> listOf1 (getPositive <$> arbitrary)
                     <*> (pure empty)
-        rBuild <- choose (0,1000)
+        rBuild <- show <$> choose (0,1000::Int)
         rOS <- scale (min 100) arbitrary
         rDate <- arbitrary
-        rLogs <- listOf arbitrary
         rMagic <- arbitrary
         rReportType <- arbitrary
         pure $ ReportInfo{..}

@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+
 -- | Information about client we want to store.
 
 module Pos.ReportServer.ClientInfo
@@ -18,7 +19,7 @@ import           Formatting.Formatters     (hex)
 import           Network.HTTP.Types.Header (Header)
 import           Network.Socket            (hostAddressToTuple)
 import           Network.Socket.Internal   (SockAddr (..))
-import           Network.Wai               (isSecure, remoteHost, requestHeaders, Request)
+import           Network.Wai               (Request, isSecure, remoteHost, requestHeaders)
 import           Universum                 hiding (decodeUtf8)
 
 newtype SockAddrW = SockAddrW SockAddr

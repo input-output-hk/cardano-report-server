@@ -17,16 +17,14 @@ import           Data.List                   (lookup, (\\))
 import qualified Data.Text                   as T
 import qualified Data.Text.Encoding          as TE (decodeUtf8)
 import           Network.HTTP.Types          (StdMethod (POST), parseMethod)
-import           Network.HTTP.Types.Status   (Status, status200, status404,
-                                              status413, status500)
+import           Network.HTTP.Types.Status   (Status, status200, status404, status413,
+                                              status500)
 import           Network.Wai                 (Application, Middleware, Request,
                                               RequestBodyLength (..), Response,
                                               requestBodyLength, requestHeaders,
                                               requestMethod, responseLBS)
-import           Network.Wai.Parse           (File, Param,
-                                              defaultParseRequestBodyOptions,
-                                              fileContent, lbsBackEnd,
-                                              parseRequestBodyEx)
+import           Network.Wai.Parse           (File, Param, defaultParseRequestBodyOptions,
+                                              fileContent, lbsBackEnd, parseRequestBodyEx)
 import           Network.Wai.UrlMap          (mapUrls, mount, mountRoot)
 import           System.IO                   (hPutStrLn)
 import           Universum
@@ -83,13 +81,10 @@ reportApp holder req respond =
           (payload :: ReportInfo) <-
               either failPayload pure . eitherDecodeStrict =<< param "payload" params
           let logFiles = map (bimap decodeUtf8 $ TE.decodeUtf8 . BSL.toStrict . fileContent) files
-          let missingLogs = rLogs payload \\ map fst logFiles
-          unless (null missingLogs) $ failMissingLogs missingLogs
-          let neededLogs = filter ((`elem` rLogs payload) . fst) logFiles
           let payloadFile = ("payload.json", prettifyJson payload)
           let cInfo = clientInfo req
           let clientInfoFile = ("client.info", prettifyJson cInfo)
-          res <- liftAndCatchIO $ addEntry holder $ payloadFile : clientInfoFile : neededLogs
+          res <- liftAndCatchIO $ addEntry holder $ payloadFile : clientInfoFile : logFiles
           case res of
               Right _ ->
                   respond (with200Response req)
@@ -101,8 +96,6 @@ reportApp holder req respond =
   where
     prettifyJson :: (ToJSON a) => a -> Text
     prettifyJson = TE.decodeUtf8 . BSL.toStrict . encodePretty
-    failMissingLogs missing =
-        throwM $ BadRequest $ "Logs mentioned in payload were not attached: " <> show missing
     failPayload e =
         throwM $ BadRequest $ "Couldn't manage to parse json payload: " <> T.pack e
 

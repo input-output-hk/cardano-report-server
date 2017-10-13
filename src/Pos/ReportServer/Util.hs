@@ -1,12 +1,19 @@
--- | Utilities
+-- | Utilities.
 
 module Pos.ReportServer.Util
        ( withFileReadLifted
        , withFileWriteLifted
+       , prettifyJson
        ) where
 
-import           System.FileLock (SharedExclusive (..), lockFile, unlockFile)
 import           Universum
+
+import           Data.Aeson               (ToJSON)
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString.Lazy     as BSL
+import qualified Data.Text.Encoding       as TE (decodeUtf8)
+import           System.FileLock          (SharedExclusive (..), lockFile, unlockFile)
+
 
 -- | Execute MonadIO action with read/shared lock on the file.
 withFileReadLifted :: (MonadIO m, MonadMask m) => FilePath -> m a -> m a
@@ -23,3 +30,7 @@ withFileModLifted lockType fp action =
     bracket (liftIO $ lockFile fp lockType)
             (\x -> liftIO $ unlockFile x)
             (const action)
+
+-- | Encodes json file in a pretty way.
+prettifyJson :: (ToJSON a) => a -> Text
+prettifyJson = TE.decodeUtf8 . BSL.toStrict . encodePretty

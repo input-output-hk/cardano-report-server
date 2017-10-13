@@ -10,10 +10,9 @@ module Pos.ReportServer.Server
 
 import           Control.Exception           (displayException, throwIO)
 import           Control.Monad.Trans.Control (MonadBaseControl)
-import           Data.Aeson                  (ToJSON, eitherDecodeStrict)
-import           Data.Aeson.Encode.Pretty    (encodePretty)
+import           Data.Aeson                  (eitherDecodeStrict)
 import qualified Data.ByteString.Lazy        as BSL
-import           Data.List                   (lookup, (\\))
+import           Data.List                   (lookup)
 import qualified Data.Text                   as T
 import qualified Data.Text.Encoding          as TE (decodeUtf8)
 import           Network.HTTP.Types          (StdMethod (POST), parseMethod)
@@ -34,6 +33,7 @@ import           Pos.ReportServer.Exception  (ReportServerException (BadRequest,
                                               tryAll)
 import           Pos.ReportServer.FileOps    (LogsHolder, addEntry)
 import           Pos.ReportServer.Report     (ReportInfo (..))
+import           Pos.ReportServer.Util       (prettifyJson)
 
 
 limitBodySize :: Word64 -> Middleware
@@ -81,10 +81,9 @@ reportApp holder req respond =
           (payload :: ReportInfo) <-
               either failPayload pure . eitherDecodeStrict =<< param "payload" params
           let logFiles = map (bimap decodeUtf8 $ TE.decodeUtf8 . BSL.toStrict . fileContent) files
-          let payloadFile = ("payload.json", prettifyJson payload)
           let cInfo = clientInfo req
           let clientInfoFile = ("client.info", prettifyJson cInfo)
-          res <- liftAndCatchIO $ addEntry holder $ payloadFile : clientInfoFile : logFiles
+          res <- liftAndCatchIO $ addEntry holder payload $ clientInfoFile : logFiles
           case res of
               Right _ ->
                   respond (with200Response req)
@@ -94,8 +93,6 @@ reportApp holder req respond =
                   respond (with500Response (toText ex) req)
         _  -> respond (with404Response req)
   where
-    prettifyJson :: (ToJSON a) => a -> Text
-    prettifyJson = TE.decodeUtf8 . BSL.toStrict . encodePretty
     failPayload e =
         throwM $ BadRequest $ "Couldn't manage to parse json payload: " <> T.pack e
 

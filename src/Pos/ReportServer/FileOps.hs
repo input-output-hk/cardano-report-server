@@ -17,26 +17,45 @@ import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
 import           Data.Time                  (UTCTime, getCurrentTime)
 import           Data.Time.Format           (defaultTimeLocale, formatTime, parseTimeM)
-import           System.Directory           (createDirectory, createDirectoryIfMissing,
-                                             doesFileExist)
+import           System.Directory           (createDirectoryIfMissing, doesFileExist)
 import           System.FilePath            ((</>))
-import           System.Random              (randomRIO)
 
 import           Pos.ReportServer.Exception (ReportServerException (MalformedIndex))
-import           Pos.ReportServer.Util      (withFileWriteLifted)
+import           Pos.ReportServer.Report    (ReportInfo (..), ReportType (..))
+import           Pos.ReportServer.Util      (prettifyJson, withFileWriteLifted)
 
 
 indexFileName :: FilePath
 indexFileName = "index.log"
 
-dateFormat :: [Char]
-dateFormat = "%F_%T_%Z"
+-- | Date format stored in index file.
+indexDateFormat, indexDateFormatOld :: [Char]
+indexDateFormat = "%F_%T_%Z_%q"
+indexDateFormatOld = "%F_%T_%Z"
 
+-- | Datatype that identifies log storage.
 data LogsHolder = LogsHolder
     { lhDir    :: FilePath
+      -- ^ Root directory we store everything in.
     , lhIndex  :: FilePath
+      -- ^ Path to the index file.
     , lhLastIx :: MVar Int
+      -- ^ Id that we can take when processing new report.
     }
+
+-- | Given a report info, generates a (relative) path to directory
+-- where data will be stored.
+genReportPath :: UTCTime -> ReportInfo -> FilePath
+genReportPath curTime ReportInfo{..} =
+    date </> repType </> time
+  where
+    repType = case rReportType of
+                  RCrash _       -> "crash"
+                  RError _       -> "error"
+                  RMisbehavior{} -> "misbehavior"
+                  RInfo _        -> "info"
+    time = formatTime defaultTimeLocale "%T_%Z_%q" curTime
+    date = formatTime defaultTimeLocale "%F" curTime
 
 -- | Parses single line of index -- returns index id, time item created
 -- on and subdir name.
@@ -46,11 +65,9 @@ parseIndexEntry line = case T.splitOn "," line of
         ix <- mToE ("Couldn't read index: " <> a) $ readMaybe $ T.unpack a
         time <-
             mToE ("Couldn't parse utctime: " <> b) $
-            parseTimeM True defaultTimeLocale dateFormat (T.unpack b)
-        let fpath = T.unpack c
-        when ("/" `T.isInfixOf` c) $
-            Left $ "Filepath has '/' inside it: " <> c
-        pure $ (ix, time, fpath)
+            parseTimeM True defaultTimeLocale indexDateFormat (T.unpack b) <|>
+            parseTimeM True defaultTimeLocale indexDateFormatOld (T.unpack b)
+        pure $ (ix, time, toString c)
     _ -> Left $ "Expected csv with 3 argument, got: " <> line
   where
     mToE reason = maybe (Left reason) Right
@@ -75,21 +92,21 @@ initHolder dir = do
 
 -- | Given logs holder and list of (filename,content), create a new
 -- logs dir, dump files there and place an entry to index.
-addEntry :: LogsHolder -> [(Text, Text)] -> IO ()
-addEntry LogsHolder{..} files = do
-    timestamp <-
-        formatTime defaultTimeLocale dateFormat <$>
-        getCurrentTime
-    (nonce :: Integer) <- randomRIO (0, 100000000)
-    let dirname = "logs_" <> timestamp <> "_" <> show nonce
-    let fullDirname = lhDir </> dirname
-    createDirectory fullDirname
-    forM_ files $ \(fname,content) ->
+addEntry :: LogsHolder -> ReportInfo -> [(Text, Text)] -> IO ()
+addEntry LogsHolder{..} reportInfo files = do
+    curTime <- getCurrentTime
+    let reportDir = genReportPath curTime reportInfo
+    let fullDirname = lhDir </> reportDir
+    let timestamp = formatTime defaultTimeLocale indexDateFormat curTime
+    createDirectoryIfMissing True fullDirname
+
+    let filesToWrite = ("payload.json", prettifyJson reportInfo) : files
+    forM_ filesToWrite $ \(fname,content) ->
         TIO.writeFile (fullDirname </> T.unpack fname) content
     modifyMVar_ lhLastIx $ \i -> do
         let entry =
                 T.intercalate ","
-                ([show i, T.pack timestamp, T.pack dirname])
+                ([show i, T.pack timestamp, T.pack fullDirname])
                 <> "\n"
         withFileWriteLifted lhIndex $ TIO.appendFile lhIndex entry
         pure $ i + 1

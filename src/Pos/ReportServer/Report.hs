@@ -20,7 +20,7 @@ import           Data.Version                 (Version (..), parseVersion, showV
 import           Text.ParserCombinators.ReadP (readP_to_S)
 import           Universum
 
--- | Type of report
+-- | Type of report.
 data ReportType
     = RCrash Int
     -- ^ This type is used only to report crash of application.
@@ -48,16 +48,22 @@ data ReportType
     -- bad\/strange\/suspicious.
     deriving (Show, Eq)
 
--- | Info medetadata sent with report
+-- | Metadata sent with report.
 data ReportInfo = ReportInfo
     { rApplication :: Text
+      -- ^ Application name, e.g. "cardano-explorer" or "deadalus".
     , rVersion     :: Version
-    , rBuild       :: Int
+      -- ^ Application version.
+    , rBuild       :: Text
+      -- ^ Build information.
     , rOS          :: Text
-    , rLogs        :: [Text]
+      -- ^ OS information.
     , rDate        :: UTCTime
+      -- ^ Date report was created on.
     , rMagic       :: Int32
+      -- ^ Cluster magic.
     , rReportType  :: ReportType
+      -- ^ Type of report.
     } deriving (Show,Eq)
 
 instance FromJSON ReportType where
@@ -111,10 +117,12 @@ instance FromJSON ReportInfo where
             maybe (fail $ "Can't read version: " <> show versionStr)
                   pure
                   (readVersion versionStr)
-        rBuild <- v .: "build"
+        let int2Text :: Int -> Text
+            int2Text = fromString . show
+        rBuild <- v .: "build" <|> (int2Text <$> v .: "build")
+        when (T.length rBuild > 100) $ fail "Build field length can't be longer than 100 chars"
         rOS <- v .: "os"
-        when (T.length rOS > 100) $ fail "OS field length cant be longer than 100 chars"
-        rLogs <- v .: "logs"
+        when (T.length rOS > 100) $ fail "OS field length can't be longer than 100 chars"
         rDateStr <- v .: "date"
         rMagic <- v .: "magic"
         let failParseDate reason =
@@ -134,7 +142,6 @@ instance ToJSON ReportInfo where
             , "build" .= rBuild
             , "os" .= rOS
             , "magic" .= rMagic
-            , "logs" .= rLogs
             , "date" .= formatTime defaultTimeLocale iso8601DateTimeFormat rDate
             , "type" .= rReportType
             ]
@@ -142,7 +149,7 @@ instance ToJSON ReportInfo where
 {-
 testReport = "{ \"application\": \"cardano-node\",\n\
              \  \"version\": \"0.0.1\",\n\
-             \  \"build\": 1,\n\
+             \  \"build\": "1",\n\
              \  \"os\": \"Linux 4.9.2 NixOS\",\n\
              \  \"logs\": [ \"kek.log\" ],\n\
              \  \"date\": \"2017-02-01T11:18:51\",\n\

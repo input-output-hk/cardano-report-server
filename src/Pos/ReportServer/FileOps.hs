@@ -12,6 +12,7 @@ module Pos.ReportServer.FileOps
 import           Universum
 
 import           Control.Concurrent         (modifyMVar_)
+import qualified Data.ByteString.Lazy       as BSL
 import qualified Data.List.NonEmpty         as NE
 import qualified Data.Text                  as T
 import qualified Data.Text.IO               as TIO
@@ -92,7 +93,7 @@ initHolder dir = do
 
 -- | Given logs holder and list of (filename,content), create a new
 -- logs dir, dump files there and place an entry to index.
-addEntry :: LogsHolder -> ReportInfo -> [(Text, Text)] -> IO ()
+addEntry :: LogsHolder -> ReportInfo -> [(FilePath, LByteString)] -> IO ()
 addEntry LogsHolder{..} reportInfo files = do
     curTime <- getCurrentTime
     let reportDir = genReportPath curTime reportInfo
@@ -100,9 +101,9 @@ addEntry LogsHolder{..} reportInfo files = do
     let timestamp = formatTime defaultTimeLocale indexDateFormat curTime
     createDirectoryIfMissing True fullDirname
 
-    let filesToWrite = ("payload.json", prettifyJson reportInfo) : files
+    let filesToWrite = ("payload.json", encodeUtf8 $ prettifyJson reportInfo) : files
     forM_ filesToWrite $ \(fname,content) ->
-        TIO.writeFile (fullDirname </> T.unpack fname) content
+        BSL.writeFile (fullDirname </> fname) content
     modifyMVar_ lhLastIx $ \i -> do
         let entry =
                 T.intercalate ","

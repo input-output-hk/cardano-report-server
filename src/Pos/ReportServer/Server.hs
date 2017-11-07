@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -11,10 +12,8 @@ module Pos.ReportServer.Server
 import           Control.Exception           (displayException, throwIO)
 import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Data.Aeson                  (eitherDecodeStrict)
-import qualified Data.ByteString.Lazy        as BSL
 import           Data.List                   (lookup)
 import qualified Data.Text                   as T
-import qualified Data.Text.Encoding          as TE (decodeUtf8)
 import           Network.HTTP.Types          (StdMethod (POST), parseMethod)
 import           Network.HTTP.Types.Status   (Status, status200, status404, status413,
                                               status500)
@@ -77,15 +76,15 @@ reportApp :: LogsHolder -> Application
 reportApp holder req respond =
     case parseMethod (requestMethod req) of
         Right POST -> do
-          (params, files) <- bodyParse req
-          (payload :: ReportInfo) <-
+          (!params, !files) <- bodyParse req
+          !(payload :: ReportInfo) <-
               either failPayload pure . eitherDecodeStrict =<< param "payload" params
-          let logFiles = map (bimap decodeUtf8 $ TE.decodeUtf8 . BSL.toStrict . fileContent) files
+          let logFiles = map (bimap decodeUtf8 fileContent) files
           let cInfo = clientInfo req
-          let clientInfoFile = ("client.info", prettifyJson cInfo)
+          let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson cInfo)
           res <- liftAndCatchIO $ addEntry holder payload $ clientInfoFile : logFiles
           case res of
-              Right _ ->
+              Right _ -> do
                   respond (with200Response req)
               Left e -> do
                   let ex = displayException e

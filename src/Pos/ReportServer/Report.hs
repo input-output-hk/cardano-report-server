@@ -8,17 +8,15 @@ module Pos.ReportServer.Report
        , ReportInfo(..)
        ) where
 
-import           Data.Aeson                   (FromJSON (..), ToJSON (..),
-                                               Value (Object, String), object, (.:), (.=))
-import           Data.Aeson.Types             (typeMismatch)
-import           Data.List                    (last)
-import qualified Data.Text                    as T
-import           Data.Time                    (UTCTime)
-import           Data.Time.Format             (defaultTimeLocale, formatTime,
-                                               iso8601DateFormat, parseTimeM)
-import           Data.Version                 (Version (..), parseVersion, showVersion)
-import           Text.ParserCombinators.ReadP (readP_to_S)
 import           Universum
+
+import           Data.Aeson (FromJSON (..), ToJSON (..), Value (Object, String), object, (.:), (.=))
+import           Data.Aeson.Types (typeMismatch)
+import qualified Data.Text as T
+import           Data.Time (UTCTime)
+import           Data.Time.Format (defaultTimeLocale, formatTime, iso8601DateFormat, parseTimeM)
+import           Data.Version (Version (..), parseVersion, showVersion)
+import           Text.ParserCombinators.ReadP (readP_to_S)
 
 -- | Type of report.
 data ReportType
@@ -99,8 +97,8 @@ supportedApps = ["daedalus", "cardano-node"]
 readVersion :: (ToString a) => a -> Maybe Version
 readVersion (toString -> s) =
     case readP_to_S parseVersion s of
-        [] -> Nothing
-        xs -> Just $ fst $ last xs
+        []     -> Nothing
+        (x:xs) -> Just $ fst $ last (x :| xs)
 
 -- YYYY-MM-DDTHH:MM:SS
 iso8601DateTimeFormat :: [Char]

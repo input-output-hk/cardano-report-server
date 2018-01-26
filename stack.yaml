@@ -1,11 +1,8 @@
-resolver: lts-9.1
-
-packages:
-- '.'
+resolver: lts-10.3
 
 nix:
   shell-file: shell.nix
 
 extra-deps:
-- universum-0.6.1
-- log-warper-1.2.0
+- universum-1.0.4
+- log-warper-1.8.6

@@ -1,5 +1,5 @@
 name:                cardano-report-server
-version:             0.4.1
+version:             0.4.2
 synopsis:            Reporting server for CSL
 description:         Please see README.md
 homepage:            https://github.com/input-output-hk/cardano-report-server
@@ -7,7 +7,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Volkhov Mikhail
 maintainer:          volhovm.cs@gmail.com
-copyright:           2017 IOHK
+copyright:           2017-2018 IOHK
 category:            Web
 build-type:          Simple
 extra-source-files:  README.md
@@ -21,6 +21,7 @@ library
                      , Pos.ReportServer.FileOps
                      , Pos.ReportServer.Server
                      , Pos.ReportServer.Util
+                     , Paths_cardano_report_server
   build-depends:       aeson >= 0.11.2.1
                      , aeson-pretty >= 0.8.2
                      , base >= 4.9.0.0 && < 5.0.0.0
@@ -69,6 +70,7 @@ executable cardano-report-server
   hs-source-dirs:      src/exec
   main-is:             Main.hs
   other-modules:       Options
+                     , Paths_cardano_report_server
   build-depends:       base >= 4.9.0.0 && < 5.0.0.0
                      , cardano-report-server
                      , directory >= 1.2.6.2
@@ -106,7 +108,7 @@ test-suite cardano-report-server-test
   build-depends:       HUnit >= 1.3.1.2
                      , QuickCheck
                      , aeson >= 0.11.2.1
-                     , base >=4.9 && <4.10
+                     , base >=4.9 && < 5
                      , cardano-report-server
                      , hspec
                      , lens

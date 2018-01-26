@@ -51,10 +51,11 @@ genReportPath curTime ReportInfo{..} =
     date </> repType </> time
   where
     repType = case rReportType of
-                  RCrash _       -> "crash"
-                  RError _       -> "error"
-                  RMisbehavior{} -> "misbehavior"
-                  RInfo _        -> "info"
+                  RCrash _            -> "crash"
+                  RError _            -> "error"
+                  RMisbehavior{}      -> "misbehavior"
+                  RInfo _             -> "info"
+                  RCustomReport _ _ _ -> "customreport"
     time = formatTime defaultTimeLocale "%T_%Z_%q" curTime
     date = formatTime defaultTimeLocale "%F" curTime
 

@@ -5,7 +5,7 @@
 module Pos.ReportServer.Report
        ( ReportType(..)
        , supportedApps
-       , ReportInfo(..)
+       , ReportInfo (..)
        ) where
 
 import           Universum

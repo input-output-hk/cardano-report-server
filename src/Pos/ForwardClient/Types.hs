@@ -2,14 +2,12 @@
 
 module Pos.ForwardClient.Types where
 
-import Pos.ReportServer.Report (ReportInfo (..))
 import Prelude
 
-import Data.ByteString.Lazy as BSL
-import Data.Text
-import qualified Data.Vector as V
-import           Data.Aeson                   (FromJSON (..), ToJSON (..),
-                                                Value (Object, String, Array), object, (.:), (.=))
+import           Data.ByteString.Lazy as BSL
+import           Data.Text
+import qualified Data.Vector          as V
+import           Data.Aeson           (ToJSON (..), Value (Array), object, (.=))
 
 data CustomReport = CustomReport {
     crEmail       :: Text
@@ -34,17 +32,17 @@ data CrTicket = CrTicket {
 } deriving Show
 
 instance ToJSON CrTicket where
-  toJSON CrTicket {..} = 
-    object [ "ticket" .= 
+  toJSON CrTicket {..} =
+    object [ "ticket" .=
       object [ "type"          .= ("custom report" :: Text)
              , "subject"       .= crSubject tCustomReport
              , "description"   .= crDescription tCustomReport
              , "requester_id"  .= aId tAgent
              , "assignee_id"   .= aId tAgent
-             , "custom_fields" .= Array (V.fromList [ object [ "id" .= (1 :: Integer), "value" .= crEmail tCustomReport] ] )
-             , "comment"       .= 
+             , "custom_fields" .= Array (V.fromList [ object [ "id" .= (1 :: Integer), "value" .= crEmail tCustomReport]])
+             , "comment"       .=
                   object [ "type"    .= ("Attached logs" :: Text)
-                         , "uploads" .= V.singleton (tAttachment)
+                         , "uploads" .= V.singleton tAttachment
                          ]
              ]
     ]

@@ -34,9 +34,6 @@ import           Pos.ReportServer.FileOps    (LogsHolder, addEntry)
 import           Pos.ReportServer.Report     (ReportInfo (..), ReportType (RCustomReport))
 import           Pos.ReportServer.Util       (prettifyJson)
 
-import           Pos.ForwardClient.Client
-import           Pos.ForwardClient.Types
-
 limitBodySize :: Word64 -> Middleware
 limitBodySize limit application request responseHandler =
     if exceeds
@@ -84,13 +81,6 @@ reportApp holder req respond =
           let logFiles = map (bimap decodeUtf8 fileContent) files
           let cInfo = clientInfo req
           let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson cInfo)
-          
-          --
-          case (rReportType payload) of
-            RCustomReport email subject descr -> do
-                let customReport = CustomReport email subject descr
-                tok <- uploadLogs defAgent logFiles
-                undefined
           res <- liftAndCatchIO $ addEntry holder payload $ clientInfoFile : logFiles
           case res of
               Right _ -> do

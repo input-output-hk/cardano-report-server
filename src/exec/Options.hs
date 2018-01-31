@@ -74,9 +74,8 @@ optsParser homeDir = do
     zdApiToken <-
         strOption
             (long "zd-token" <> metavar "STRING" <> help "Zendesk api token")
-    zdId <- option auto (long "zd-id" <> metavar "INTEGER" <> help "Zendesk id")
 
-    pure $ Opts {zendeskAgent = Agent zdEmail zdApiToken zdId, ..}
+    pure $ Opts {zendeskAgent = Agent zdEmail zdApiToken, ..}
 
 getOptions :: IO Opts
 getOptions = do

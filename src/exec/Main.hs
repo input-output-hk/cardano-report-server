@@ -8,9 +8,11 @@ import qualified Network.Wai.Handler.Warp as Warp
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import           Universum
 
-import           Options (Opts (..), getOptions)
+import           Pos.ForwardClient.Client (getAgentID)
 import           Pos.ReportServer.FileOps (initHolder)
 import           Pos.ReportServer.Server (limitBodySize, reportServerApp)
+
+import           Options (Opts (..), getOptions)
 
 main :: IO ()
 main = do
@@ -20,5 +22,10 @@ main = do
     putText "Successfully created holder"
 
     putText "Launching server..."
-    let application = reportServerApp holder zendeskAgent
+
+    putText "Authenticating in zendesk..."
+    agentID <- liftIO $ getAgentID zendeskAgent
+    putText "Authenticating in zendesk... done"
+
+    let application = reportServerApp holder zendeskAgent agentID
     Warp.run port $ logStdoutDev $ limitBodySize sizeLimit $ application

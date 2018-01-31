@@ -25,8 +25,8 @@ import           Network.Wai.Parse (File, Param, defaultParseRequestBodyOptions,
 import           Network.Wai.UrlMap (mapUrls, mount, mountRoot)
 import           System.IO (hPutStrLn)
 
-import           Pos.ForwardClient.Client (createTicket)
-import           Pos.ForwardClient.Types (Agent, CustomReport (..))
+import           Pos.ForwardClient.Client (createTicket, getAgentID)
+import           Pos.ForwardClient.Types (Agent, AgentId, CustomReport (..))
 import           Pos.ReportServer.ClientInfo (clientInfo)
 import           Pos.ReportServer.Exception (ReportServerException (BadRequest, ParameterNotFound),
                                              tryAll)
@@ -71,8 +71,8 @@ param key ps = case lookup key ps of
     Just val -> return val
     Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
-reportApp :: LogsHolder -> Agent -> Application
-reportApp holder zdAgent req respond =
+reportApp :: LogsHolder -> Agent -> AgentId -> Application
+reportApp holder zdAgent zdAgentId req respond =
     case parseMethod (requestMethod req) of
         Right POST -> do
           (!params, !files) <- bodyParse req
@@ -88,7 +88,7 @@ reportApp holder zdAgent req respond =
                   case rReportType payload of
                       RCustomReport{..} -> do
                           let cr = CustomReport crEmail crSubject crProblem
-                          Just <$> createTicket zdAgent cr allLogs
+                          Just <$> createTicket zdAgent zdAgentId cr allLogs
                       _                 -> pure Nothing
               -- Put record into the local storage.
               addEntry holder payload allLogs
@@ -118,7 +118,8 @@ with500Response = withStatus status500
 notFound :: Application
 notFound req respond = respond (with404Response req)
 
-reportServerApp :: LogsHolder -> Agent -> Application
-reportServerApp holder agent = mapUrls $
-        mount "report" (reportApp holder agent)
-    <|> mountRoot notFound
+reportServerApp :: LogsHolder -> Agent -> AgentId -> Application
+reportServerApp holder agent agentID =
+    mapUrls $
+        mount "report" (reportApp holder agent agentID) <|>
+        mountRoot notFound

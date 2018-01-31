@@ -6,6 +6,7 @@ module Pos.ForwardClient.Types
     , Agent(..)
     , Logs
     , Token
+    , AgentId(..)
     , CrTicket(..)
     ) where
 
@@ -23,15 +24,18 @@ data CustomReport = CustomReport
 data Agent = Agent
     { aEmail   :: Text
     , apiToken :: Token
-    , aId      :: Integer
     } deriving (Show)
 
 type Logs = [(FilePath, LByteString)]
 
 type Token = Text
 
+newtype AgentId = AgentId
+    { unAgentId :: Integer
+    } deriving (Show)
+
 data CrTicket = CrTicket
-    { tAgent        :: Agent
+    { tId           :: AgentId
     , tCustomReport :: CustomReport
     , tAttachment   :: Token
     } deriving (Show)
@@ -42,8 +46,8 @@ instance ToJSON CrTicket where
           object [ "type"          .= ("custom report" :: Text)
                  , "subject"       .= crSubject tCustomReport
                  , "description"   .= crDescription tCustomReport
-                 , "requester_id"  .= aId tAgent
-                 , "assignee_id"   .= aId tAgent
+                 , "requester_id"  .= unAgentId tId
+                 , "assignee_id"   .= unAgentId tId
                  , "custom_fields" .= Array (V.fromList $ one $ object
                                              [ "id" .= (1 :: Integer)
                                              , "value" .= crEmail tCustomReport])

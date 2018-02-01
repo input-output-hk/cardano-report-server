@@ -19,4 +19,4 @@ install:
 script:
 - stack --no-terminal build --test --haddock --no-haddock-deps --bench --jobs=4
 notifications:
-  email: true
+  email: false

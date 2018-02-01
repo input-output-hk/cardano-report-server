@@ -1,5 +1,5 @@
 name:                cardano-report-server
-version:             0.4.2
+version:             0.4.3
 synopsis:            Reporting server for CSL
 description:         Please see README.md
 homepage:            https://github.com/input-output-hk/cardano-report-server
@@ -21,6 +21,9 @@ library
                      , Pos.ReportServer.FileOps
                      , Pos.ReportServer.Server
                      , Pos.ReportServer.Util
+                     , Pos.ForwardClient.Types
+                     , Pos.ForwardClient.Client
+
                      , Paths_cardano_report_server
   build-depends:       aeson >= 0.11.2.1
                      , aeson-pretty >= 0.8.2
@@ -50,6 +53,8 @@ library
                      , wai >= 3.2.1.1
                      , wai-extra >= 3.0.19
                      , warp >= 3.2.9
+                     , wreq
+                     , lens-aeson
   ghc-options:         -Wall
   default-language:    Haskell2010
   default-extensions:  GeneralizedNewtypeDeriving
@@ -65,6 +70,7 @@ library
                        ViewPatterns
                        LambdaCase
                        MultiWayIf
+                       BangPatterns
 
 executable cardano-report-server
   hs-source-dirs:      src/exec
@@ -100,6 +106,7 @@ executable cardano-report-server
                        ViewPatterns
                        LambdaCase
                        MultiWayIf
+                       BangPatterns
 
 test-suite cardano-report-server-test
   main-is:             Test.hs

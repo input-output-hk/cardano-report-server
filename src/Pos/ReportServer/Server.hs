@@ -9,31 +9,30 @@ module Pos.ReportServer.Server
        , limitBodySize
        ) where
 
-import           Control.Exception           (displayException, throwIO)
-import           Control.Monad.Trans.Control (MonadBaseControl)
-import           Data.Aeson                  (eitherDecodeStrict)
-import           Data.List                   (lookup)
-import qualified Data.Text                   as T
-import           Network.HTTP.Types          (StdMethod (POST), parseMethod)
-import           Network.HTTP.Types.Status   (Status, status200, status404, status413,
-                                              status500)
-import           Network.Wai                 (Application, Middleware, Request,
-                                              RequestBodyLength (..), Response,
-                                              requestBodyLength, requestHeaders,
-                                              requestMethod, responseLBS)
-import           Network.Wai.Parse           (File, Param, defaultParseRequestBodyOptions,
-                                              fileContent, lbsBackEnd, parseRequestBodyEx)
-import           Network.Wai.UrlMap          (mapUrls, mount, mountRoot)
-import           System.IO                   (hPutStrLn)
 import           Universum
 
-import           Pos.ReportServer.ClientInfo (clientInfo)
-import           Pos.ReportServer.Exception  (ReportServerException (BadRequest, ParameterNotFound),
-                                              tryAll)
-import           Pos.ReportServer.FileOps    (LogsHolder, addEntry)
-import           Pos.ReportServer.Report     (ReportInfo (..))
-import           Pos.ReportServer.Util       (prettifyJson)
+import           Control.Exception (displayException, throwIO)
+import           Control.Monad.Trans.Control (MonadBaseControl)
+import           Data.Aeson (eitherDecodeStrict)
+import           Data.List (lookup)
+import qualified Data.Text as T
+import           Network.HTTP.Types (StdMethod (POST), parseMethod)
+import           Network.HTTP.Types.Status (Status, status200, status404, status413, status500)
+import           Network.Wai (Application, Middleware, Request, RequestBodyLength (..), Response,
+                              requestBodyLength, requestHeaders, requestMethod, responseLBS)
+import           Network.Wai.Parse (File, Param, defaultParseRequestBodyOptions, fileContent,
+                                    lbsBackEnd, parseRequestBodyEx)
+import           Network.Wai.UrlMap (mapUrls, mount, mountRoot)
+import           System.IO (hPutStrLn)
 
+import           Pos.ForwardClient.Client (createTicket)
+import           Pos.ForwardClient.Types (Agent, AgentId, CustomReport (..))
+import           Pos.ReportServer.ClientInfo (clientInfo)
+import           Pos.ReportServer.Exception (ReportServerException (BadRequest, ParameterNotFound),
+                                             tryAll)
+import           Pos.ReportServer.FileOps (LogsHolder, addEntry)
+import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..))
+import           Pos.ReportServer.Util (prettifyJson)
 
 limitBodySize :: Word64 -> Middleware
 limitBodySize limit application request responseHandler =
@@ -72,8 +71,8 @@ param key ps = case lookup key ps of
     Just val -> return val
     Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
-reportApp :: LogsHolder -> Application
-reportApp holder req respond =
+reportApp :: LogsHolder -> Agent -> AgentId -> Application
+reportApp holder zdAgent zdAgentId req respond =
     case parseMethod (requestMethod req) of
         Right POST -> do
           (!params, !files) <- bodyParse req
@@ -82,10 +81,22 @@ reportApp holder req respond =
           let logFiles = map (bimap decodeUtf8 fileContent) files
           let cInfo = clientInfo req
           let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson cInfo)
-          res <- liftAndCatchIO $ addEntry holder payload $ clientInfoFile : logFiles
+          res <- liftAndCatchIO $ do
+              let allLogs = clientInfoFile : logFiles
+              -- Send data to zendesk if needed.
+              zResp <-
+                  case rReportType payload of
+                      RCustomReport{..} -> do
+                          let cr = CustomReport crEmail crSubject crProblem
+                          Just <$> createTicket zdAgent zdAgentId cr allLogs
+                      _                 -> pure Nothing
+              -- Put record into the local storage.
+              addEntry holder payload allLogs
+              pure zResp
           case res of
-              Right _ -> do
-                  respond (with200Response req)
+              Right maybeZDResp -> do
+                  let respText = fromMaybe mempty $ decodeUtf8 <$> maybeZDResp
+                  respond (with200Response respText req)
               Left e -> do
                   let ex = displayException e
                   hPutStrLn stderr ("An exception occurred: " <> ex)
@@ -98,8 +109,8 @@ reportApp holder req respond =
 with404Response :: Request -> Response
 with404Response = withStatus status404 "Not found"
 
-with200Response :: Request -> Response
-with200Response = withStatus status200 mempty
+with200Response :: Text -> Request -> Response
+with200Response = withStatus status200
 
 with500Response :: Text -> Request -> Response
 with500Response = withStatus status500
@@ -107,7 +118,8 @@ with500Response = withStatus status500
 notFound :: Application
 notFound req respond = respond (with404Response req)
 
-reportServerApp :: LogsHolder -> Application
-reportServerApp holder = mapUrls $
-        mount "report" (reportApp holder)
-    <|> mountRoot notFound
+reportServerApp :: LogsHolder -> Agent -> AgentId -> Application
+reportServerApp holder agent agentID =
+    mapUrls $
+        mount "report" (reportApp holder agent agentID) <|>
+        mountRoot notFound

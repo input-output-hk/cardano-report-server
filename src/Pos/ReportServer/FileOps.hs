@@ -11,19 +11,19 @@ module Pos.ReportServer.FileOps
 
 import           Universum
 
-import           Control.Concurrent         (modifyMVar_)
-import qualified Data.ByteString.Lazy       as BSL
-import qualified Data.List.NonEmpty         as NE
-import qualified Data.Text                  as T
-import qualified Data.Text.IO               as TIO
-import           Data.Time                  (UTCTime, getCurrentTime)
-import           Data.Time.Format           (defaultTimeLocale, formatTime, parseTimeM)
-import           System.Directory           (createDirectoryIfMissing, doesFileExist)
-import           System.FilePath            ((</>))
+import           Control.Concurrent (modifyMVar_)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+import           Data.Time (UTCTime, getCurrentTime)
+import           Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
+import           System.Directory (createDirectoryIfMissing, doesFileExist)
+import           System.FilePath ((</>))
 
 import           Pos.ReportServer.Exception (ReportServerException (MalformedIndex))
-import           Pos.ReportServer.Report    (ReportInfo (..), ReportType (..))
-import           Pos.ReportServer.Util      (prettifyJson, withFileWriteLifted)
+import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..))
+import           Pos.ReportServer.Util (prettifyJson, withFileWriteLifted)
 
 
 indexFileName :: FilePath
@@ -51,10 +51,11 @@ genReportPath curTime ReportInfo{..} =
     date </> repType </> time
   where
     repType = case rReportType of
-                  RCrash _       -> "crash"
-                  RError _       -> "error"
-                  RMisbehavior{} -> "misbehavior"
-                  RInfo _        -> "info"
+                  RCrash _            -> "crash"
+                  RError _            -> "error"
+                  RMisbehavior{}      -> "misbehavior"
+                  RInfo _             -> "info"
+                  RCustomReport _ _ _ -> "customreport"
     time = formatTime defaultTimeLocale "%T_%Z_%q" curTime
     date = formatTime defaultTimeLocale "%F" curTime
 

@@ -5,7 +5,7 @@
 module Pos.ReportServer.Report
        ( ReportType(..)
        , supportedApps
-       , ReportInfo(..)
+       , ReportInfo (..)
        ) where
 
 import           Universum
@@ -44,6 +44,14 @@ data ReportType
     -- ^ The type of report used to send statistical or any other
     -- useful information and doesn't indicate anything
     -- bad\/strange\/suspicious.
+    | RCustomReport { crEmail :: Text
+                      -- ^ The user's email address
+                    , crSubject :: Text
+                      -- ^ The title of the report
+                    , crProblem :: Text
+                      -- ^ Description of the issue(s)
+                    }
+    -- ^ This is a custom user report coming directly from Daedalus.
     deriving (Show, Eq)
 
 -- | Metadata sent with report.
@@ -70,6 +78,7 @@ instance FromJSON ReportType where
         String "error" -> RError <$> v .: "message"
         String "misbehavior" -> RMisbehavior <$> v .: "isCritical" <*> v .: "reason"
         String "info" -> RInfo <$> v .: "description"
+        String "customreport" -> RCustomReport <$> v .: "email" <*> v .: "subject" <*> v .: "problem"
         String unknown ->
             fail $ toString $ "ReportType: report 'type' " <> unknown <> " is unknown"
         other  -> typeMismatch "ReportType.type: should be string" other
@@ -90,6 +99,12 @@ instance ToJSON ReportType where
             , "reason" .= reason
             ]
     toJSON (RInfo descr) = object ["type" .= idt "info", "description" .= descr]
+    toJSON (RCustomReport email subject problem) =
+        object
+            [ "email"   .= email
+            , "subject" .= subject
+            , "problem" .= problem
+            ]
 
 supportedApps :: [Text]
 supportedApps = ["daedalus", "cardano-node"]

@@ -16,14 +16,14 @@ import           Data.Aeson (ToJSON (..), Value (Array), object, (.=))
 import qualified Data.Vector as V
 
 data CustomReport = CustomReport
-    { crEmail       :: Text
-    , crSubject     :: Text
-    , crDescription :: Text
+    { crEmail       :: !Text
+    , crSubject     :: !Text
+    , crDescription :: !Text
     } deriving (Show)
 
 data Agent = Agent
-    { aEmail   :: Text
-    , apiToken :: Token
+    { aEmail   :: !Text
+    , apiToken :: !Token
     } deriving (Show)
 
 type Logs = [(FilePath, LByteString)]
@@ -35,9 +35,9 @@ newtype AgentId = AgentId
     } deriving (Show)
 
 data CrTicket = CrTicket
-    { tId           :: AgentId
-    , tCustomReport :: CustomReport
-    , tAttachment   :: Token
+    { tId           :: !AgentId
+    , tCustomReport :: !CustomReport
+    , tAttachment   :: !Token
     } deriving (Show)
 
 instance ToJSON CrTicket where

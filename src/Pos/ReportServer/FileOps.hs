@@ -11,19 +11,19 @@ module Pos.ReportServer.FileOps
 
 import           Universum
 
-import           Control.Concurrent         (modifyMVar_)
-import qualified Data.ByteString.Lazy       as BSL
-import qualified Data.List.NonEmpty         as NE
-import qualified Data.Text                  as T
-import qualified Data.Text.IO               as TIO
-import           Data.Time                  (UTCTime, getCurrentTime)
-import           Data.Time.Format           (defaultTimeLocale, formatTime, parseTimeM)
-import           System.Directory           (createDirectoryIfMissing, doesFileExist)
-import           System.FilePath            ((</>))
+import           Control.Concurrent (modifyMVar_)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+import           Data.Time (UTCTime, getCurrentTime)
+import           Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
+import           System.Directory (createDirectoryIfMissing, doesFileExist)
+import           System.FilePath ((</>))
 
 import           Pos.ReportServer.Exception (ReportServerException (MalformedIndex))
-import           Pos.ReportServer.Report    (ReportInfo (..), ReportType (..))
-import           Pos.ReportServer.Util      (prettifyJson, withFileWriteLifted)
+import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..))
+import           Pos.ReportServer.Util (prettifyJson, withFileWriteLifted)
 
 
 indexFileName :: FilePath

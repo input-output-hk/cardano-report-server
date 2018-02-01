@@ -70,6 +70,7 @@ library
                        ViewPatterns
                        LambdaCase
                        MultiWayIf
+                       BangPatterns
 
 executable cardano-report-server
   hs-source-dirs:      src/exec
@@ -105,6 +106,7 @@ executable cardano-report-server
                        ViewPatterns
                        LambdaCase
                        MultiWayIf
+                       BangPatterns
 
 test-suite cardano-report-server-test
   main-is:             Test.hs

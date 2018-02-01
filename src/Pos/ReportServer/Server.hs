@@ -25,7 +25,7 @@ import           Network.Wai.Parse (File, Param, defaultParseRequestBodyOptions,
 import           Network.Wai.UrlMap (mapUrls, mount, mountRoot)
 import           System.IO (hPutStrLn)
 
-import           Pos.ForwardClient.Client (createTicket, getAgentID)
+import           Pos.ForwardClient.Client (createTicket)
 import           Pos.ForwardClient.Types (Agent, AgentId, CustomReport (..))
 import           Pos.ReportServer.ClientInfo (clientInfo)
 import           Pos.ReportServer.Exception (ReportServerException (BadRequest, ParameterNotFound),

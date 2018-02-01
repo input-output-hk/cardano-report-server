@@ -32,10 +32,10 @@ agentOptsJson (Agent email token) =
 -- | Queries the zendesk api to get the agent's id
 getAgentID :: Agent -> IO AgentId
 getAgentID agent = do
-    r <- getWith (agentOpts agent) (api ++ "locales/current.json")
+    r <- getWith (agentOpts agent) (api ++ "users/me.json")
     let tok =
             fromMaybe (error "getAgentId: couldn't retrieve locale.id field") $
-            r ^? responseBody . key "locale" . key "id" . _Integer
+            r ^? responseBody . key "user" . key "id" . _Integer
     pure $ AgentId tok
 
 -- | Merges the log files, uploads them to Zendesk and returns the token from zendesk.

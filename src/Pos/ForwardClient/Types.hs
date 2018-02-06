@@ -12,7 +12,7 @@ module Pos.ForwardClient.Types
 
 import           Universum
 
-import           Data.Aeson (ToJSON (..), Value (Array), object, (.=))
+import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Vector as V
 
 data CustomReport = CustomReport
@@ -48,12 +48,10 @@ instance ToJSON CrTicket where
                  , "description"   .= crDescription tCustomReport
                  , "requester_id"  .= unAgentId tId
                  , "assignee_id"   .= unAgentId tId
-                 , "custom_fields" .= Array (V.fromList $ one $ object
-                                             [ "id" .= (1 :: Integer)
-                                             , "value" .= crEmail tCustomReport])
                  , "comment"       .=
                       object [ "type"    .= ("Attached logs" :: Text)
                              , "uploads" .= V.singleton tAttachment
+                             , "body" .= crEmail tCustomReport
                              ]
                  ]
       ]

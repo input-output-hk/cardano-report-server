@@ -42,10 +42,10 @@ getAgentID agent = do
 -- The name of the upload is defaulted to logs.log
 uploadLogs :: Agent -> [(FilePath, LByteString)] -> IO Token
 uploadLogs agent logs = do
-    BSL.writeFile "logs.log" $ joinLogs logs
+    BSL.writeFile "logs.zip" $ joinLogs logs
     r <- postWith (agentOpts agent)
-                  (api ++ "uploads.json?filename=logs.log")
-                  (partFile "log" "logs.log")
+                  (api ++ "uploads.json?filename=logs.zip")
+                  (partFile "log" "logs.zip")
     let Just tok = r ^? responseBody . key "upload" . key "token" . _String
     pure tok
   where

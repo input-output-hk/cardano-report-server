@@ -88,7 +88,7 @@ reportApp holder zdAgent zdAgentId req respond =
                   case rReportType payload of
                       RCustomReport{..} -> do
                           let cr = CustomReport crEmail crSubject crProblem
-                          Just <$> createTicket zdAgent zdAgentId cr allLogs
+                          Just <$> createTicket zdAgent zdAgentId cr logFiles
                       _                 -> pure Nothing
               -- Put record into the local storage.
               addEntry holder payload allLogs

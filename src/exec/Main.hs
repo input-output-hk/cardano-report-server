@@ -19,6 +19,7 @@ import           Options (Opts (..), getOptions)
 main :: IO ()
 main = do
     a@Opts{..} <- getOptions
+
     putTextLn $ "Started with options: " <> show a
 
     putText "Reading/creating holder folder..."
@@ -31,5 +32,5 @@ main = do
 
     putTextLn "Launching server"
 
-    let application = reportServerApp holder zendeskAgent agentID
+    let application = reportServerApp holder zendeskAgent agentID store sendLogs
     Warp.run port $ logStdoutDev $ limitBodySize sizeLimit $ application

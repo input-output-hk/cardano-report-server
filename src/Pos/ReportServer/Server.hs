@@ -30,7 +30,7 @@ import           Pos.ForwardClient.Types (Agent, AgentId, CustomReport (..))
 import           Pos.ReportServer.ClientInfo (clientInfo)
 import           Pos.ReportServer.Exception (ReportServerException (BadRequest, ParameterNotFound),
                                              tryAll)
-import           Pos.ReportServer.FileOps (LogsHolder, addEntry)
+import           Pos.ReportServer.FileOps (LogsHolder, addEntry, storeCustomReport)
 import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..))
 import           Pos.ReportServer.Util (prettifyJson)
 
@@ -71,8 +71,9 @@ param key ps = case lookup key ps of
     Just val -> return val
     Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
-reportApp :: LogsHolder -> Agent -> AgentId -> Application
-reportApp holder zdAgent zdAgentId req respond =
+reportApp :: LogsHolder -> Agent -> AgentId
+          -> Bool -> Bool -> Application
+reportApp holder zdAgent zdAgentId store send req respond =
     case parseMethod (requestMethod req) of
         Right POST -> do
           (!params, !files) <- bodyParse req
@@ -84,14 +85,16 @@ reportApp holder zdAgent zdAgentId req respond =
           res <- liftAndCatchIO $ do
               let allLogs = clientInfoFile : logFiles
               -- Send data to zendesk if needed.
-              zResp <-
-                  case rReportType payload of
-                      RCustomReport{..} -> do
-                          let cr = CustomReport crEmail crSubject crProblem
-                          Just <$> createTicket zdAgent zdAgentId cr logFiles
-                      _                 -> pure Nothing
+              zResp <- case rReportType payload of
+                RCustomReport{..} -> do
+                    let cr = CustomReport crEmail crSubject crProblem
+                    response <- createTicket zdAgent zdAgentId cr logFiles send
+                    when store $ storeCustomReport holder payload allLogs response
+                    pure $ Just response
+                _                 -> do
+                    addEntry holder payload allLogs
+                    pure Nothing
               -- Put record into the local storage.
-              addEntry holder payload allLogs
               pure zResp
           case res of
               Right maybeZDResp -> do
@@ -118,8 +121,9 @@ with500Response = withStatus status500
 notFound :: Application
 notFound req respond = respond (with404Response req)
 
-reportServerApp :: LogsHolder -> Agent -> AgentId -> Application
-reportServerApp holder agent agentID =
+reportServerApp :: LogsHolder -> Agent -> AgentId ->
+                   Bool -> Bool -> Application
+reportServerApp holder agent agentID store send =
     mapUrls $
-        mount "report" (reportApp holder agent agentID) <|>
+        mount "report" (reportApp holder agent agentID store send) <|>
         mountRoot notFound

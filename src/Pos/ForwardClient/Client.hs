@@ -3,6 +3,7 @@
 module Pos.ForwardClient.Client
        ( getAgentID
        , createTicket
+       , getTicketID
        ) where
 
 import           Universum
@@ -38,6 +39,10 @@ getAgentID agent = do
             r ^? responseBody . key "user" . key "id" . _Integer
     pure $ AgentId tok
 
+getTicketID :: LByteString -> Maybe Integer
+getTicketID r = r ^? key "ticket" . key "id" . _Integer
+
+
 -- | Merges the log files, uploads them to Zendesk and returns the token from zendesk.
 -- The name of the upload is defaulted to logs.log
 uploadLogs :: Agent -> [(FilePath, LByteString)] -> IO Token
@@ -53,10 +58,14 @@ uploadLogs agent logs = do
     joinLogs = mconcat . map snd
 
 -- | Creates ticket and uploads logs.
-createTicket :: Agent -> AgentId -> CustomReport -> [(FilePath, LByteString)] -> IO LByteString
-createTicket agent agentId cr logs = do
-    attachToken <- uploadLogs agent logs
-    let ticket = CrTicket agentId cr attachToken
+createTicket :: Agent -> AgentId -> CustomReport -> [(FilePath, LByteString)] -> 
+                Bool -> IO LByteString
+createTicket agent agentId cr logs send = do
+    ticket <- if send then do
+                attachToken <- uploadLogs agent logs
+                pure $ CrTicket agentId cr (Just attachToken)
+              else
+                pure $ CrTicket agentId cr Nothing
     putStrLn $ prettifyJson ticket
     r <- postWith (agentOptsJson agent)
                   (api ++ "tickets.json")

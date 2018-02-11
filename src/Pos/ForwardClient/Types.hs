@@ -37,21 +37,35 @@ newtype AgentId = AgentId
 data CrTicket = CrTicket
     { tId           :: !AgentId
     , tCustomReport :: !CustomReport
-    , tAttachment   :: !Token
+    , tAttachment   :: !(Maybe Token)
     } deriving (Show)
 
 instance ToJSON CrTicket where
-  toJSON CrTicket {..} =
-      object [ "ticket" .=
-          object [ "type"          .= ("custom report" :: Text)
-                 , "subject"       .= crSubject tCustomReport
-                 , "description"   .= crDescription tCustomReport
-                 , "requester_id"  .= unAgentId tId
-                 , "assignee_id"   .= unAgentId tId
-                 , "comment"       .=
-                      object [ "type"    .= ("Attached logs" :: Text)
-                             , "uploads" .= V.singleton tAttachment
-                             , "body" .= crEmail tCustomReport
-                             ]
-                 ]
-      ]
+  toJSON CrTicket {..} = case tAttachment of
+    Just token ->
+        object [ "ticket" .=
+            object [ "type"          .= ("custom report" :: Text)
+                    , "subject"       .= crSubject tCustomReport
+                    , "description"   .= crDescription tCustomReport
+                    , "requester_id"  .= unAgentId tId
+                    , "assignee_id"   .= unAgentId tId
+                    , "comment"       .=
+                        object [ "type"    .= ("Attached logs" :: Text)
+                                , "uploads" .= V.singleton token
+                                , "body" .= crEmail tCustomReport
+                                ]
+                    ]
+        ]
+    Nothing ->
+        object [ "ticket" .=
+            object [ "type"          .= ("custom report" :: Text)
+                    , "subject"       .= crSubject tCustomReport
+                    , "description"   .= crDescription tCustomReport
+                    , "requester_id"  .= unAgentId tId
+                    , "assignee_id"   .= unAgentId tId
+                    , "comment"       .=
+                        object [ "type"    .= ("Attached logs" :: Text)
+                                , "body" .= crEmail tCustomReport
+                                ]
+                    ]
+        ]

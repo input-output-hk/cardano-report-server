@@ -25,8 +25,8 @@ import           Network.Wai.Parse (File, Param, defaultParseRequestBodyOptions,
 import           Network.Wai.UrlMap (mapUrls, mount, mountRoot)
 import           System.IO (hPutStrLn)
 
-import           Pos.ForwardClient.Client (createTicket)
-import           Pos.ForwardClient.Types (Agent, AgentId, CustomReport (..))
+import           Pos.ForwardClient.Client (createTicket, ReportAppParams (..))
+import           Pos.ForwardClient.Types (CustomReport (..))
 import           Pos.ReportServer.ClientInfo (clientInfo)
 import           Pos.ReportServer.Exception (ReportServerException (BadRequest, ParameterNotFound),
                                              tryAll)
@@ -71,9 +71,8 @@ param key ps = case lookup key ps of
     Just val -> return val
     Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
-reportApp :: LogsHolder -> Agent -> AgentId
-          -> Bool -> Bool -> Application
-reportApp holder zdAgent zdAgentId store send req respond =
+reportApp :: LogsHolder -> ReportAppParams -> Application
+reportApp holder rap@ReportAppParams {..} req respond =
     case parseMethod (requestMethod req) of
         Right POST -> do
           (!params, !files) <- bodyParse req
@@ -88,8 +87,8 @@ reportApp holder zdAgent zdAgentId store send req respond =
               zResp <- case rReportType payload of
                 RCustomReport{..} -> do
                     let cr = CustomReport crEmail crSubject crProblem
-                    response <- createTicket zdAgent zdAgentId cr logFiles send
-                    when store $ storeCustomReport holder payload allLogs response
+                    response <- createTicket cr logFiles rap
+                    when rapStore $ storeCustomReport holder payload allLogs response
                     pure $ Just response
                 _                 -> do
                     addEntry holder payload allLogs
@@ -121,9 +120,8 @@ with500Response = withStatus status500
 notFound :: Application
 notFound req respond = respond (with404Response req)
 
-reportServerApp :: LogsHolder -> Agent -> AgentId ->
-                   Bool -> Bool -> Application
-reportServerApp holder agent agentID store send =
+reportServerApp :: LogsHolder -> ReportAppParams -> Application
+reportServerApp holder rap =
     mapUrls $
-        mount "report" (reportApp holder agent agentID store send) <|>
+        mount "report" (reportApp holder rap) <|>
         mountRoot notFound

@@ -41,8 +41,7 @@ data CrTicket = CrTicket
     } deriving (Show)
 
 instance ToJSON CrTicket where
-  toJSON CrTicket {..} = case tAttachment of
-    Just token ->
+  toJSON CrTicket {..} =
         object [ "ticket" .=
             object [ "type"          .= ("custom report" :: Text)
                     , "subject"       .= crSubject tCustomReport
@@ -51,20 +50,9 @@ instance ToJSON CrTicket where
                     , "assignee_id"   .= unAgentId tId
                     , "comment"       .=
                         object [ "type"    .= ("Attached logs" :: Text)
-                                , "uploads" .= V.singleton token
-                                , "body" .= crEmail tCustomReport
-                                ]
-                    ]
-        ]
-    Nothing ->
-        object [ "ticket" .=
-            object [ "type"          .= ("custom report" :: Text)
-                    , "subject"       .= crSubject tCustomReport
-                    , "description"   .= crDescription tCustomReport
-                    , "requester_id"  .= unAgentId tId
-                    , "assignee_id"   .= unAgentId tId
-                    , "comment"       .=
-                        object [ "type"    .= ("Attached logs" :: Text)
+                                , "uploads" .= case tAttachment of
+                                    Just token -> V.singleton token
+                                    Nothing    -> V.empty
                                 , "body" .= crEmail tCustomReport
                                 ]
                     ]

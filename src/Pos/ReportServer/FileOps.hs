@@ -115,12 +115,10 @@ addEntry LogsHolder{..} reportInfo files = do
         withFileWriteLifted lhIndex $ TIO.appendFile lhIndex entry
         pure $ i + 1
 
-
-
 storeCustomReport :: LogsHolder -> ReportInfo -> [(FilePath, LByteString)]
                   -> LByteString -> IO ()
 storeCustomReport holder reportInfo files zResp = do
-    let Just id = getTicketID zResp
+    let id = fromMaybe (error "invalid zendesk response") $ getTicketID zResp
     let fullDirname = lhDir holder </> "custom-reports" </> show id
     createDirectoryIfMissing True fullDirname
     let filesToWrite = ("payload.json", encodeUtf8 $ prettifyJson reportInfo) : files

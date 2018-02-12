@@ -10,7 +10,7 @@ import           Universum
 import qualified Network.Wai.Handler.Warp as Warp
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 
-import           Pos.ForwardClient.Client (getAgentID)
+import           Pos.ForwardClient.Client (getAgentID, ReportAppParams (..))
 import           Pos.ReportServer.FileOps (initHolder)
 import           Pos.ReportServer.Server (limitBodySize, reportServerApp)
 
@@ -31,6 +31,6 @@ main = do
     putTextLn "done"
 
     putTextLn "Launching server"
-
-    let application = reportServerApp holder zendeskAgent agentID store sendLogs
-    Warp.run port $ logStdoutDev $ limitBodySize sizeLimit $ application
+    let rap = ReportAppParams zendeskAgent agentID store sendLogs
+    let application = reportServerApp holder rap
+    Warp.run port $ logStdoutDev $ limitBodySize sizeLimit application

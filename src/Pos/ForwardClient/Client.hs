@@ -4,6 +4,7 @@ module Pos.ForwardClient.Client
        ( getAgentID
        , createTicket
        , getTicketID
+       , ReportAppParams (..)
        ) where
 
 import           Universum
@@ -17,6 +18,13 @@ import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, head
 import           Pos.ForwardClient.Types (Agent (..), AgentId (..), CrTicket (..),
                                           CustomReport (..), Token)
 import           Pos.ReportServer.Util (prettifyJson)
+
+data ReportAppParams = ReportAppParams {
+    rapAgent    :: Agent
+  , rapAgentId  :: AgentId
+  , rapStore    :: Bool
+  , rapSendLogs :: Bool
+}
 
 api :: String
 api = "https://iohksupport.zendesk.com/api/v2/"
@@ -58,16 +66,16 @@ uploadLogs agent logs = do
     joinLogs = mconcat . map snd
 
 -- | Creates ticket and uploads logs.
-createTicket :: Agent -> AgentId -> CustomReport -> [(FilePath, LByteString)] -> 
-                Bool -> IO LByteString
-createTicket agent agentId cr logs send = do
-    ticket <- if send then do
-                attachToken <- uploadLogs agent logs
-                pure $ CrTicket agentId cr (Just attachToken)
+createTicket :: CustomReport -> [(FilePath, LByteString)]
+             -> ReportAppParams -> IO LByteString
+createTicket cr logs ReportAppParams {..} = do
+    ticket <- if rapSendLogs then do
+                attachToken <- uploadLogs rapAgent logs
+                pure $ CrTicket rapAgentId cr (Just attachToken)
               else
-                pure $ CrTicket agentId cr Nothing
+                pure $ CrTicket rapAgentId cr Nothing
     putStrLn $ prettifyJson ticket
-    r <- postWith (agentOptsJson agent)
+    r <- postWith (agentOptsJson rapAgent)
                   (api ++ "tickets.json")
                   (encodeUtf8 (prettifyJson ticket) :: ByteString)
     pure $ r ^. responseBody

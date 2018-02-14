@@ -88,19 +88,19 @@ reportApp holder rap@ReportAppParams {..} req respond =
                 RCustomReport{..} -> do
                     let cr = CustomReport crEmail crSubject crProblem
                     case logFiles of
-                        [_] -> do  -- Single file
-                            response <- createTicket cr logFiles rap
+                        (_:_:_) -> throwIO $ BadRequest "Multiple files not allowed with custom reports."
+                        _       -> do
+                            response <- createTicket cr logFiles rap'
                             -- Store the report locally if needed.
                             when rapStore $
                                 storeCustomReport holder payload allLogs response
                             pure $ Just response
-                        []  -> do  -- No logs included
-                            response <- createTicket cr logFiles (rap {rapSendLogs = False})
-                            when rapStore $
-                                storeCustomReport holder payload allLogs response
-                            pure $ Just response
-                        _  -> throwIO $ BadRequest "Multiple files not allowed with custom reports."
-                _                 -> do
+                          where
+                            rap' = case logFiles of
+                                []  -> rap {rapSendLogs = False}
+                                [_] -> rap
+                                _   -> error "Should never match"
+                _  -> do
                     addEntry holder payload allLogs
                     pure Nothing
               pure zResp

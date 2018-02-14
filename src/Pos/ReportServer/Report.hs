@@ -107,7 +107,7 @@ instance ToJSON ReportType where
             ]
 
 supportedApps :: [Text]
-supportedApps = ["daedalus", "cardano-node"]
+supportedApps = ["daedalus", "cardano-node", "mantis-node"]
 
 readVersion :: (ToString a) => a -> Maybe Version
 readVersion (toString -> s) =

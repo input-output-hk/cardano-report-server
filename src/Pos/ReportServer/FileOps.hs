@@ -7,6 +7,7 @@ module Pos.ReportServer.FileOps
        ( LogsHolder (..)
        , initHolder
        , addEntry
+       , storeCustomReport
        ) where
 
 import           Universum
@@ -25,6 +26,7 @@ import           Pos.ReportServer.Exception (ReportServerException (MalformedInd
 import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..))
 import           Pos.ReportServer.Util (prettifyJson, withFileWriteLifted)
 
+import           Pos.ForwardClient.Client (getTicketID)
 
 indexFileName :: FilePath
 indexFileName = "index.log"
@@ -48,14 +50,16 @@ data LogsHolder = LogsHolder
 -- where data will be stored.
 genReportPath :: UTCTime -> ReportInfo -> FilePath
 genReportPath curTime ReportInfo{..} =
-    date </> repType </> time
+    case rReportType of
+        RCustomReport {} -> "custom-reports" </> date
+        _                -> date </> repType </> time
   where
     repType = case rReportType of
                   RCrash _            -> "crash"
                   RError _            -> "error"
                   RMisbehavior{}      -> "misbehavior"
                   RInfo _             -> "info"
-                  RCustomReport _ _ _ -> "customreport"
+                  RCustomReport{}     -> error "repType is not ever called with RCustomReport"
     time = formatTime defaultTimeLocale "%T_%Z_%q" curTime
     date = formatTime defaultTimeLocale "%F" curTime
 
@@ -101,7 +105,6 @@ addEntry LogsHolder{..} reportInfo files = do
     let fullDirname = lhDir </> reportDir
     let timestamp = formatTime defaultTimeLocale indexDateFormat curTime
     createDirectoryIfMissing True fullDirname
-
     let filesToWrite = ("payload.json", encodeUtf8 $ prettifyJson reportInfo) : files
     forM_ filesToWrite $ \(fname,content) ->
         BSL.writeFile (fullDirname </> fname) content
@@ -112,3 +115,13 @@ addEntry LogsHolder{..} reportInfo files = do
                 <> "\n"
         withFileWriteLifted lhIndex $ TIO.appendFile lhIndex entry
         pure $ i + 1
+
+storeCustomReport :: LogsHolder -> ReportInfo -> [(FilePath, LByteString)]
+                  -> LByteString -> IO ()
+storeCustomReport holder reportInfo files zResp = do
+    let id = fromMaybe (error "invalid zendesk response") $ getTicketID zResp
+    let fullDirname = lhDir holder </> "custom-reports" </> show id
+    createDirectoryIfMissing True fullDirname
+    let filesToWrite = ("payload.json", encodeUtf8 $ prettifyJson reportInfo) : files
+    forM_ filesToWrite $ \(fname, content) ->
+        BSL.writeFile (fullDirname </> fname) content

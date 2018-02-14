@@ -37,21 +37,23 @@ newtype AgentId = AgentId
 data CrTicket = CrTicket
     { tId           :: !AgentId
     , tCustomReport :: !CustomReport
-    , tAttachment   :: !Token
+    , tAttachment   :: !(Maybe Token)
     } deriving (Show)
 
 instance ToJSON CrTicket where
   toJSON CrTicket {..} =
-      object [ "ticket" .=
-          object [ "type"          .= ("custom report" :: Text)
-                 , "subject"       .= crSubject tCustomReport
-                 , "description"   .= crDescription tCustomReport
-                 , "requester_id"  .= unAgentId tId
-                 , "assignee_id"   .= unAgentId tId
-                 , "comment"       .=
-                      object [ "type"    .= ("Attached logs" :: Text)
-                             , "uploads" .= V.singleton tAttachment
-                             , "body" .= crEmail tCustomReport
-                             ]
-                 ]
-      ]
+        object [ "ticket" .=
+            object [ "type"          .= ("custom report" :: Text)
+                    , "subject"       .= crSubject tCustomReport
+                    , "description"   .= crDescription tCustomReport
+                    , "requester_id"  .= unAgentId tId
+                    , "assignee_id"   .= unAgentId tId
+                    , "comment"       .=
+                        object [ "type"    .= ("Attached logs" :: Text)
+                                , "uploads" .= case tAttachment of
+                                    Just token -> V.singleton token
+                                    Nothing    -> V.empty
+                                , "body" .= crEmail tCustomReport
+                                ]
+                    ]
+        ]

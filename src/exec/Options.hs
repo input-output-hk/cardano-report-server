@@ -13,7 +13,7 @@ import           Data.Char (toLower, toUpper)
 import           Options.Applicative (Parser, ReadM, auto, eitherReader, execParserPure, fullDesc,
                                       handleParseResult, header, help, helper, idm, info,
                                       infoOption, long, metavar, option, prefs, progDesc, short,
-                                      strOption, value, (<**>))
+                                      strOption, value, (<**>), switch)
 import           System.Directory (getHomeDirectory)
 import           System.FilePath ((</>))
 import           System.Wlog.Severity (Severity (..))
@@ -26,6 +26,8 @@ import           Pos.ForwardClient.Types (Agent (..))
 data Opts = Opts
     { port         :: Int
     , logsDir      :: FilePath
+    , store        :: Bool
+    , sendLogs     :: Bool
     , severity     :: Severity
     , zendeskAgent :: Agent
     , sizeLimit    :: Word64
@@ -56,6 +58,12 @@ optsParser homeDir = do
             (long "logsdir" <> metavar "FILEPATH" <>
              value (homeDir </> ".cardano-report-server") <>
              help "Directory server will be saving logs in")
+    store <-
+        switch
+            (long "store" <> help "Store custom reports")
+    sendLogs <-
+        switch
+            (long "send-logs" <> help "Send logs from custom reports to Zendesk")
     severity <-
         option
             (fromParsec severityParser)
@@ -64,7 +72,7 @@ optsParser homeDir = do
     sizeLimit <-
         option
             auto
-            (long "size-limit" <> metavar "BYTES" <> value (5 * 1024 * 1024) <>
+            (long "size-limit" <> metavar "BYTES" <> value (25 * 1024 * 1024) <>
              help
                  "Maximum body size allowed (will send 413 responses if bigger)")
     zdEmail <-
@@ -74,8 +82,7 @@ optsParser homeDir = do
     zdApiToken <-
         strOption
             (long "zd-token" <> metavar "STRING" <> help "Zendesk api token")
-
-    pure $ Opts {zendeskAgent = Agent zdEmail zdApiToken, ..}
+    pure Opts {zendeskAgent = Agent zdEmail zdApiToken, ..}
 
 getOptions :: IO Opts
 getOptions = do

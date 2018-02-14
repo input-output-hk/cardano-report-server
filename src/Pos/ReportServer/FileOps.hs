@@ -59,6 +59,7 @@ genReportPath curTime ReportInfo{..} =
                   RError _            -> "error"
                   RMisbehavior{}      -> "misbehavior"
                   RInfo _             -> "info"
+                  RCustomReport{}     -> error "repType is not ever called with RCustomReport"
     time = formatTime defaultTimeLocale "%T_%Z_%q" curTime
     date = formatTime defaultTimeLocale "%F" curTime
 

@@ -11,8 +11,7 @@ import           Universum
 
 import           Control.Lens ((?~))
 import           Data.Aeson.Lens (key, _Integer, _String)
-import qualified Data.ByteString.Lazy as BSL
-import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, header, partFile,
+import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, header,
                                postWith, responseBody)
 
 import           Pos.ForwardClient.Types (Agent (..), AgentId (..), CrTicket (..),
@@ -50,20 +49,16 @@ getAgentID agent = do
 getTicketID :: LByteString -> Maybe Integer
 getTicketID r = r ^? key "ticket" . key "id" . _Integer
 
-
 -- | Merges the log files, uploads them to Zendesk and returns the token from zendesk.
 -- The name of the upload is defaulted to logs.log
 uploadLogs :: Agent -> [(FilePath, LByteString)] -> IO Token
-uploadLogs agent logs = do
-    BSL.writeFile "logs.zip" $ joinLogs logs
+uploadLogs agent [(fileName, content)] = do
     r <- postWith (agentOpts agent)
-                  (api ++ "uploads.json?filename=logs.zip")
-                  (partFile "log" "logs.zip")
+                  (api ++ "uploads.json?filename=" ++ fileName)
+                  content
     let Just tok = r ^? responseBody . key "upload" . key "token" . _String
     pure tok
-  where
-    joinLogs :: [(FilePath, LByteString)] -> LByteString
-    joinLogs = mconcat . map snd
+uploadLogs _ _ = error "Multiple files not allowed."
 
 -- | Creates ticket and uploads logs.
 createTicket :: CustomReport -> [(FilePath, LByteString)]

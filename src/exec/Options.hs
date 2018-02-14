@@ -72,7 +72,7 @@ optsParser homeDir = do
     sizeLimit <-
         option
             auto
-            (long "size-limit" <> metavar "BYTES" <> value (5 * 1024 * 1024) <>
+            (long "size-limit" <> metavar "BYTES" <> value (25 * 1024 * 1024) <>
              help
                  "Maximum body size allowed (will send 413 responses if bigger)")
     zdEmail <-

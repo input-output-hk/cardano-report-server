@@ -1,29 +1,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Pos.ForwardClient.Client
-       ( getAgentID
-       , createTicket
-       , getTicketID
-       , ReportAppParams (..)
-       ) where
+    ( getAgentID
+    , createTicket
+    , getTicketID
+    , ZendeskParams(..)
+    ) where
 
 import           Universum
 
 import           Control.Lens ((?~))
 import           Data.Aeson.Lens (key, _Integer, _String)
-import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, header,
-                               postWith, responseBody)
+import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, header, postWith,
+                               responseBody)
 
 import           Pos.ForwardClient.Types (Agent (..), AgentId (..), CrTicket (..),
                                           CustomReport (..), Token)
 import           Pos.ReportServer.Util (prettifyJson)
 
-data ReportAppParams = ReportAppParams {
-    rapAgent    :: Agent
-  , rapAgentId  :: AgentId
-  , rapStore    :: Bool
-  , rapSendLogs :: Bool
-}
+data ZendeskParams = ZendeskParams
+    { zpAgent    :: Agent
+    , zpAgentId  :: AgentId
+    , zpSendLogs :: Bool
+    }
 
 api :: String
 api = "https://iohksupport.zendesk.com/api/v2/"
@@ -61,16 +60,19 @@ uploadLogs agent [(fileName, content)] = do
 uploadLogs _ _ = error "Multiple files not allowed."
 
 -- | Creates ticket and uploads logs.
-createTicket :: CustomReport -> [(FilePath, LByteString)]
-             -> ReportAppParams -> IO LByteString
-createTicket cr logs ReportAppParams {..} = do
-    ticket <- if rapSendLogs then do
-                attachToken <- uploadLogs rapAgent logs
-                pure $ CrTicket rapAgentId cr (Just attachToken)
-              else
-                pure $ CrTicket rapAgentId cr Nothing
+createTicket ::
+       CustomReport
+    -> [(FilePath, LByteString)]
+    -> ZendeskParams
+    -> IO LByteString
+createTicket cr logs ZendeskParams {..} = do
+    attachToken <-
+        if zpSendLogs && length logs > 0
+        then Just <$> uploadLogs zpAgent logs
+        else pure Nothing
+    let ticket = CrTicket zpAgentId cr attachToken
     putStrLn $ prettifyJson ticket
-    r <- postWith (agentOptsJson rapAgent)
+    r <- postWith (agentOptsJson zpAgent)
                   (api ++ "tickets.json")
                   (encodeUtf8 (prettifyJson ticket) :: ByteString)
     pure $ r ^. responseBody

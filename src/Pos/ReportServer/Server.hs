@@ -5,7 +5,8 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Pos.ReportServer.Server
-       ( reportServerApp
+       ( ServerContext(..)
+       , reportServerApp
        , limitBodySize
        ) where
 
@@ -25,7 +26,7 @@ import           Network.Wai.Parse (File, Param, defaultParseRequestBodyOptions,
 import           Network.Wai.UrlMap (mapUrls, mount, mountRoot)
 import           System.IO (hPutStrLn)
 
-import           Pos.ForwardClient.Client (createTicket, ReportAppParams (..))
+import           Pos.ForwardClient.Client (ZendeskParams (..), createTicket)
 import           Pos.ForwardClient.Types (CustomReport (..))
 import           Pos.ReportServer.ClientInfo (clientInfo)
 import           Pos.ReportServer.Exception (ReportServerException (BadRequest, ParameterNotFound),
@@ -33,6 +34,15 @@ import           Pos.ReportServer.Exception (ReportServerException (BadRequest, 
 import           Pos.ReportServer.FileOps (LogsHolder, addEntry, storeCustomReport)
 import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..))
 import           Pos.ReportServer.Util (prettifyJson)
+
+data ServerContext = ServerContext
+    { scZendeskParams      :: !(Maybe ZendeskParams) -- ^ If Nothing, zd is turned off
+    , scStoreCustomReports :: !Bool -- ^ If we store logs on custom
+                                   -- report. This will only be used
+                                   -- if zendesk integration is on,
+                                   -- because we store response too.
+    , scLogsHolder         :: !LogsHolder
+    }
 
 limitBodySize :: Word64 -> Middleware
 limitBodySize limit application request responseHandler =
@@ -71,8 +81,8 @@ param key ps = case lookup key ps of
     Just val -> return val
     Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
-reportApp :: LogsHolder -> Maybe ReportAppParams -> Application
-reportApp holder mrap req respond =
+reportApp :: ServerContext -> Application
+reportApp ServerContext{..} req respond =
     case parseMethod (requestMethod req) of
         Right POST -> do
           (!params, !files) <- bodyParse req
@@ -83,26 +93,29 @@ reportApp holder mrap req respond =
           let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson cInfo)
           res <- liftAndCatchIO $ do
               let allLogs = clientInfoFile : logFiles
+
               -- Send data to zendesk if needed.
-              zResp <- case (mrap, rReportType payload) of
-                (Just rap@ReportAppParams {..}, RCustomReport{..}) -> do
+              zResp <- case (scZendeskParams, rReportType payload) of
+                (Just zp, RCustomReport{..}) -> do
                     let cr = CustomReport crEmail crSubject crProblem
-                    case logFiles of
-                        (_:_:_) -> throwIO $ BadRequest "Multiple files not allowed with custom reports."
-                        _       -> do
-                            response <- createTicket cr logFiles rap'
-                            -- Store the report locally if needed.
-                            when rapStore $
-                                storeCustomReport holder payload allLogs response
-                            pure $ Just response
-                          where
-                            rap' = case logFiles of
-                                []  -> rap {rapSendLogs = False}
-                                [_] -> rap
-                                _   -> error "Should never match"
-                _  -> do
-                    addEntry holder payload allLogs
-                    pure Nothing
+                    when (length logFiles > 1) $
+                       throwIO $ BadRequest "Multiple files not allowed with custom reports."
+                    response <- createTicket cr logFiles zp
+                    when (scStoreCustomReports) $
+                        storeCustomReport scLogsHolder payload allLogs response
+                    pure $ Just response
+                (Nothing, r@RCustomReport{}) -> do
+                    let e = "Ignoring custom report because zendesk " <>
+                              "is turned off: " <> show r
+                    putStrLn e
+                    pure $ Just e
+                _  -> pure Nothing
+
+              -- store report locally if it's not custom
+              case rReportType payload of
+                  RCustomReport{} -> pass
+                  _               -> addEntry scLogsHolder payload allLogs
+
               pure zResp
           case res of
               Right maybeZDResp -> do
@@ -129,8 +142,8 @@ with500Response = withStatus status500
 notFound :: Application
 notFound req respond = respond (with404Response req)
 
-reportServerApp :: LogsHolder -> Maybe ReportAppParams -> Application
-reportServerApp holder rap =
+reportServerApp :: ServerContext -> Application
+reportServerApp context =
     mapUrls $
-        mount "report" (reportApp holder rap) <|>
+        mount "report" (reportApp context) <|>
         mountRoot notFound

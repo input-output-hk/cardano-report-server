@@ -9,42 +9,26 @@ module Options
        , getOptions
        ) where
 
-import           Data.Char (toLower, toUpper)
-import           Options.Applicative (Parser, ReadM, auto, eitherReader, execParserPure, fullDesc,
-                                      handleParseResult, header, help, helper, idm, info,
-                                      infoOption, long, metavar, option, prefs, progDesc, short,
-                                      strOption, value, (<**>), switch)
+import           Options.Applicative (Parser, auto, execParserPure, fullDesc, handleParseResult,
+                                      header, help, helper, idm, info, infoOption, long, metavar,
+                                      option, prefs, progDesc, short, strOption, switch, value,
+                                      (<**>))
 import           System.Directory (getHomeDirectory)
 import           System.FilePath ((</>))
-import           System.Wlog.Severity (Severity (..))
-import qualified Text.Parsec as P
 import           Universum
 
 import           Paths_cardano_report_server (version)
 import           Pos.ForwardClient.Types (Agent (..))
 
 data Opts = Opts
-    { port         :: Int
-    , logsDir      :: FilePath
-    , store        :: Bool
-    , sendLogs     :: Bool
-    , severity     :: Severity
-    , zendeskAgent :: Maybe Agent
-    , sizeLimit    :: Word64
+    { port               :: Int
+    , logsDir            :: FilePath
+    , sizeLimit          :: Word64
+    , storeCustomReports :: Bool
+
+    , zdAgent            :: Maybe Agent
+    , zdSendLogs         :: Bool
     } deriving (Show)
-
-fromParsec :: P.Parsec [Char] () a -> ReadM a
-fromParsec parser =
-    eitherReader $ either (Left . show) Right . P.parse parser "<CLI options>"
-
-severityParser :: P.Parsec [Char] () Severity
-severityParser =
-    foldl1 (<|>) $ map toParser $ [Debug, Info, Notice, Warning, Error]
-  where
-
-    toParser x = string' (show x) $> x
-    string' t =
-        P.string t <|> P.string (map toLower t) <|> P.string (map toUpper t)
 
 optsParser :: FilePath -> Parser Opts
 optsParser homeDir = do
@@ -58,23 +42,19 @@ optsParser homeDir = do
             (long "logsdir" <> metavar "FILEPATH" <>
              value (homeDir </> ".cardano-report-server") <>
              help "Directory server will be saving logs in")
-    store <-
-        switch
-            (long "store" <> help "Store custom reports")
-    sendLogs <-
-        switch
-            (long "send-logs" <> help "Send logs from custom reports to Zendesk")
-    severity <-
-        option
-            (fromParsec severityParser)
-            (long "severity" <> metavar "SEVERITY" <> value Info <>
-             help "Logging severity")
     sizeLimit <-
         option
             auto
             (long "size-limit" <> metavar "BYTES" <> value (25 * 1024 * 1024) <>
              help
                  "Maximum body size allowed (will send 413 responses if bigger)")
+    storeCustomReports <-
+        switch
+            (long "store-custom" <> help "Store custom reports")
+
+    zdSendLogs <-
+        switch
+            (long "zd-send-logs" <> help "Send logs from custom reports to Zendesk")
     zdEmail <-
         optional $ fromString <$>
         strOption
@@ -84,7 +64,7 @@ optsParser homeDir = do
         optional $ fromString <$>
         strOption
             (long "zd-token" <> metavar "STRING" <> help "Zendesk api token")
-    pure Opts {zendeskAgent = Agent <$> zdEmail <*> zdApiToken, ..}
+    pure Opts { zdAgent = Agent <$> zdEmail <*> zdApiToken, ..}
 
 getOptions :: IO Opts
 getOptions = do

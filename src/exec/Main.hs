@@ -30,11 +30,13 @@ main = do
     holder <- initHolder logsDir
     ptL "done"
 
-    pt "Authenticating in zendesk..."
-    !agentID <- getAgentID zendeskAgent
-    ptL "done"
+    mAgentID <- forM zendeskAgent $ \za -> do
+          pt "Authenticating in zendesk..."
+          !agentID <- getAgentID za
+          ptL "done"
+          return (agentID, za)
 
     ptL "Launching server"
-    let rap = ReportAppParams zendeskAgent agentID store sendLogs
+    let rap = fmap (\(agentID, za) -> ReportAppParams za agentID store sendLogs) mAgentID
     let application = reportServerApp holder rap
     Warp.run port $ logStdoutDev $ limitBodySize sizeLimit application

@@ -71,8 +71,8 @@ param key ps = case lookup key ps of
     Just val -> return val
     Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
-reportApp :: LogsHolder -> ReportAppParams -> Application
-reportApp holder rap@ReportAppParams {..} req respond =
+reportApp :: LogsHolder -> Maybe ReportAppParams -> Application
+reportApp holder mrap req respond =
     case parseMethod (requestMethod req) of
         Right POST -> do
           (!params, !files) <- bodyParse req
@@ -84,8 +84,8 @@ reportApp holder rap@ReportAppParams {..} req respond =
           res <- liftAndCatchIO $ do
               let allLogs = clientInfoFile : logFiles
               -- Send data to zendesk if needed.
-              zResp <- case rReportType payload of
-                RCustomReport{..} -> do
+              zResp <- case (mrap, rReportType payload) of
+                (Just rap@ReportAppParams {..}, RCustomReport{..}) -> do
                     let cr = CustomReport crEmail crSubject crProblem
                     case logFiles of
                         (_:_:_) -> throwIO $ BadRequest "Multiple files not allowed with custom reports."
@@ -129,7 +129,7 @@ with500Response = withStatus status500
 notFound :: Application
 notFound req respond = respond (with404Response req)
 
-reportServerApp :: LogsHolder -> ReportAppParams -> Application
+reportServerApp :: LogsHolder -> Maybe ReportAppParams -> Application
 reportServerApp holder rap =
     mapUrls $
         mount "report" (reportApp holder rap) <|>

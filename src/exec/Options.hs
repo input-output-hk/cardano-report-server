@@ -29,7 +29,7 @@ data Opts = Opts
     , store        :: Bool
     , sendLogs     :: Bool
     , severity     :: Severity
-    , zendeskAgent :: Agent
+    , zendeskAgent :: Maybe Agent
     , sizeLimit    :: Word64
     } deriving (Show)
 
@@ -76,15 +76,15 @@ optsParser homeDir = do
              help
                  "Maximum body size allowed (will send 413 responses if bigger)")
     zdEmail <-
-        fromString <$>
+        optional $ fromString <$>
         strOption
             (long "zd-email" <> metavar "STRING" <>
              help "Email to access zendesk")
     zdApiToken <-
-        fromString <$>
+        optional $ fromString <$>
         strOption
             (long "zd-token" <> metavar "STRING" <> help "Zendesk api token")
-    pure Opts {zendeskAgent = Agent zdEmail zdApiToken, ..}
+    pure Opts {zendeskAgent = Agent <$> zdEmail <*> zdApiToken, ..}
 
 getOptions :: IO Opts
 getOptions = do

@@ -30,14 +30,12 @@ main = do
     holder <- initHolder logsDir
     ptL "done"
 
-    mAgentID <- forM zdAgent $ \za -> do
+    scZendeskParams <- forM zdAgent $ \za -> do
           pt "Authenticating in zendesk..."
           !agentID <- getAgentID za
           ptL "done"
-          return (agentID, za)
+          return $ ZendeskParams za agentID zdSendLogs
 
-    let scZendeskParams =
-            fmap (\(agentID, za) -> ZendeskParams za agentID zdSendLogs) mAgentID
     let scStoreCustomReports = storeCustomReports
     let scLogsHolder = holder
     let sc = ServerContext {..}

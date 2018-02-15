@@ -1,5 +1,5 @@
 name:                cardano-report-server
-version:             0.4.4
+version:             0.4.5
 synopsis:            Reporting server for CSL
 description:         Please see README.md
 homepage:            https://github.com/input-output-hk/cardano-report-server
@@ -48,7 +48,7 @@ library
                      , text >= 1.2.2.1
                      , time >= 1.6.0.1
                      , transformers >= 0.5.2.0
-                     , universum >= 0.2.1
+                     , universum >= 0.9.0
                      , vector >= 0.11.0.0
                      , wai >= 3.2.1.1
                      , wai-extra >= 3.0.19

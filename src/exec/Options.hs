@@ -76,10 +76,12 @@ optsParser homeDir = do
              help
                  "Maximum body size allowed (will send 413 responses if bigger)")
     zdEmail <-
+        fromString <$>
         strOption
             (long "zd-email" <> metavar "STRING" <>
              help "Email to access zendesk")
     zdApiToken <-
+        fromString <$>
         strOption
             (long "zd-token" <> metavar "STRING" <> help "Zendesk api token")
     pure Opts {zendeskAgent = Agent zdEmail zdApiToken, ..}

@@ -12,6 +12,7 @@ import           Universum
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), Value (Object, String), object, (.:), (.=))
 import           Data.Aeson.Types (typeMismatch)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import           Data.Time (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime, iso8601DateFormat, parseTimeM)
@@ -113,7 +114,7 @@ readVersion :: (ToString a) => a -> Maybe Version
 readVersion (toString -> s) =
     case readP_to_S parseVersion s of
         []     -> Nothing
-        (x:xs) -> Just $ fst $ last (x :| xs)
+        (x:xs) -> Just $ fst $ NE.last (x :| xs)
 
 -- YYYY-MM-DDTHH:MM:SS
 iso8601DateTimeFormat :: [Char]

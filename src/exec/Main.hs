@@ -20,17 +20,21 @@ main :: IO ()
 main = do
     a@Opts{..} <- getOptions
 
-    putTextLn $ "Started with options: " <> show a
+    -- compatibility issues with the old universum
+    let pt (t :: Text) = putStr t
+    let ptL (t :: Text) = putStrLn t
 
-    putText "Reading/creating holder folder..."
+    ptL $ "Started with options: " <> show a
+
+    pt "Reading/creating holder folder..."
     holder <- initHolder logsDir
-    putTextLn "done"
+    ptL "done"
 
-    putText "Authenticating in zendesk..."
+    pt "Authenticating in zendesk..."
     !agentID <- getAgentID zendeskAgent
-    putTextLn "done"
+    ptL "done"
 
-    putTextLn "Launching server"
+    ptL "Launching server"
     let rap = ReportAppParams zendeskAgent agentID store sendLogs
     let application = reportServerApp holder rap
     Warp.run port $ logStdoutDev $ limitBodySize sizeLimit application

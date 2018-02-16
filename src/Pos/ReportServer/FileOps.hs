@@ -55,11 +55,11 @@ genReportPath curTime ReportInfo{..} =
         _                -> date </> repType </> time
   where
     repType = case rReportType of
-                  RCrash _            -> "crash"
-                  RError _            -> "error"
-                  RMisbehavior{}      -> "misbehavior"
-                  RInfo _             -> "info"
-                  RCustomReport{}     -> error "repType is not ever called with RCustomReport"
+                  RCrash _        -> "crash"
+                  RError _        -> "error"
+                  RMisbehavior{}  -> "misbehavior"
+                  RInfo _         -> "info"
+                  RCustomReport{} -> error "repType is not ever called with RCustomReport"
     time = formatTime defaultTimeLocale "%T_%Z_%q" curTime
     date = formatTime defaultTimeLocale "%F" curTime
 
@@ -116,8 +116,12 @@ addEntry LogsHolder{..} reportInfo files = do
         withFileWriteLifted lhIndex $ TIO.appendFile lhIndex entry
         pure $ i + 1
 
-storeCustomReport :: LogsHolder -> ReportInfo -> [(FilePath, LByteString)]
-                  -> LByteString -> IO ()
+storeCustomReport ::
+       LogsHolder
+    -> ReportInfo
+    -> [(FilePath, LByteString)]
+    -> LByteString
+    -> IO ()
 storeCustomReport holder reportInfo files zResp = do
     let id = fromMaybe (error "invalid zendesk response") $ getTicketID zResp
     let fullDirname = lhDir holder </> "custom-reports" </> show id

@@ -10,9 +10,9 @@ import           Universum
 import qualified Network.Wai.Handler.Warp as Warp
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 
-import           Pos.ForwardClient.Client (getAgentID, ReportAppParams (..))
+import           Pos.ForwardClient.Client (ZendeskParams (..), getAgentID)
 import           Pos.ReportServer.FileOps (initHolder)
-import           Pos.ReportServer.Server (limitBodySize, reportServerApp)
+import           Pos.ReportServer.Server (ServerContext (..), limitBodySize, reportServerApp)
 
 import           Options (Opts (..), getOptions)
 
@@ -30,11 +30,16 @@ main = do
     holder <- initHolder logsDir
     ptL "done"
 
-    pt "Authenticating in zendesk..."
-    !agentID <- getAgentID zendeskAgent
-    ptL "done"
+    scZendeskParams <- forM zdAgent $ \za -> do
+          pt "Authenticating in zendesk..."
+          !agentID <- getAgentID za
+          ptL "done"
+          return $ ZendeskParams za agentID zdSendLogs
+
+    let scStoreCustomReports = storeCustomReports
+    let scLogsHolder = holder
+    let sc = ServerContext {..}
 
     ptL "Launching server"
-    let rap = ReportAppParams zendeskAgent agentID store sendLogs
-    let application = reportServerApp holder rap
+    let application = reportServerApp sc
     Warp.run port $ logStdoutDev $ limitBodySize sizeLimit application

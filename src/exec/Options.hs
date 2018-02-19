@@ -55,16 +55,23 @@ optsParser homeDir = do
     zdSendLogs <-
         switch
             (long "zd-send-logs" <> help "Send logs from custom reports to Zendesk")
-    zdEmail <-
-        optional $ fromString <$>
-        strOption
-            (long "zd-email" <> metavar "STRING" <>
-             help "Email to access zendesk")
-    zdApiToken <-
-        optional $ fromString <$>
-        strOption
-            (long "zd-token" <> metavar "STRING" <> help "Zendesk api token")
-    pure Opts { zdAgent = Agent <$> zdEmail <*> zdApiToken, ..}
+
+    zdAgent <- optional parseAgentOpts
+
+    pure Opts {..}
+
+parseAgentOpts :: Parser Agent
+parseAgentOpts = Agent <$> email <*> token <*> account
+  where
+    email   = fromString <$> strOption
+              (long "zd-email" <> metavar "STRING" <>
+               help "Email to access zendesk")
+    token   = fromString <$> strOption
+              (long "zd-token" <> metavar "STRING" <>
+               help "Zendesk api token")
+    account = fromString <$> strOption
+              (long "zd-account" <> metavar "NAME" <>
+               help "Zendesk account name (first part of account URL)")
 
 getOptions :: IO Opts
 getOptions = do

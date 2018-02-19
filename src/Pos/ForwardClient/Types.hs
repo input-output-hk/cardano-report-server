@@ -24,6 +24,7 @@ data CustomReport = CustomReport
 data Agent = Agent
     { aEmail   :: !Text
     , apiToken :: !Token
+    , aAccount :: !Text
     } deriving (Show)
 
 type Logs = [(FilePath, LByteString)]

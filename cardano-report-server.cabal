@@ -1,5 +1,5 @@
 name:                cardano-report-server
-version:             0.4.6
+version:             0.4.7
 synopsis:            Reporting server for CSL
 description:         Please see README.md
 homepage:            https://github.com/input-output-hk/cardano-report-server

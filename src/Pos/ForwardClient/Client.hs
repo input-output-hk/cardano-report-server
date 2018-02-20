@@ -11,6 +11,7 @@ import           Universum
 
 import           Control.Lens ((?~))
 import           Data.Aeson.Lens (key, _Integer, _String)
+import qualified Data.Text as T
 import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, header, postWith,
                                responseBody)
 
@@ -24,22 +25,22 @@ data ZendeskParams = ZendeskParams
     , zpSendLogs :: Bool
     }
 
-api :: String
-api = "https://iohksupport.zendesk.com/api/v2/"
+api :: Agent -> String
+api agent = "https://" ++ T.unpack (aAccount agent) ++ ".zendesk.com/api/v2/"
 
 agentOpts :: Agent -> Options
-agentOpts (Agent email token) =
+agentOpts (Agent email token _) =
     defaults & auth ?~ basicAuth (encodeUtf8 (email <> "/token")) (encodeUtf8 token)
 
 agentOptsJson :: Agent -> Options
-agentOptsJson (Agent email token) =
+agentOptsJson (Agent email token _) =
     defaults & header "content-type" .~ ["application/json"]
              & auth ?~ basicAuth (encodeUtf8 (email <> "/token")) (encodeUtf8 token)
 
 -- | Queries the zendesk api to get the agent's id
 getAgentID :: Agent -> IO AgentId
 getAgentID agent = do
-    r <- getWith (agentOpts agent) (api ++ "users/me.json")
+    r <- getWith (agentOpts agent) (api agent ++ "users/me.json")
     let tok =
             fromMaybe (error "getAgentId: couldn't retrieve locale.id field") $
             r ^? responseBody . key "user" . key "id" . _Integer
@@ -53,7 +54,7 @@ getTicketID r = r ^? key "ticket" . key "id" . _Integer
 uploadLogs :: Agent -> [(FilePath, LByteString)] -> IO Token
 uploadLogs agent [(fileName, content)] = do
     r <- postWith (agentOpts agent)
-                  (api ++ "uploads.json?filename=" ++ fileName)
+                  (api agent ++ "uploads.json?filename=" ++ fileName)
                   content
     let Just tok = r ^? responseBody . key "upload" . key "token" . _String
     pure tok
@@ -73,6 +74,6 @@ createTicket cr logs ZendeskParams {..} = do
     let ticket = CrTicket zpAgentId cr attachToken
     putStrLn $ prettifyJson ticket
     r <- postWith (agentOptsJson zpAgent)
-                  (api ++ "tickets.json")
+                  (api zpAgent ++ "tickets.json")
                   (encodeUtf8 (prettifyJson ticket) :: ByteString)
     pure $ r ^. responseBody

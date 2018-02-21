@@ -40,3 +40,14 @@ options:
    `https://ACCOUNT.zendesk.com/agent/admin/api/settings`.
  * `--zd-send-logs` -- Optional switch which enables uploading of logs
    from Daedalus.
+
+To register a user for this purpose, the [Zendesk API][1] can be used:
+
+```
+curl https://ACCOUNT.zendesk.com/api/v2/users/create_or_update.json \
+  -d '{"user": {"name": "Report Server Agent", "email": "report-server@iohk.io", "role": "agent" }}' \
+  -H "Content-Type: application/json" -X POST \
+  -v -u 'EMAIL/token:BASE64_TOKEN'
+```
+
+[1]: https://developer.zendesk.com/rest_api/docs/core/users#create-user

@@ -82,13 +82,12 @@ executable cardano-report-server
                      , directory >= 1.2.6.2
                      , filepath >= 1.4.1.0
                      , http-types >= 0.9.1
-                     , log-warper >= 0.3.1
                      , monad-control >= 1.0.1.0
                      , mtl >= 2.2.1
                      , optparse-applicative >= 0.12.1.0
                      , parsec >= 3.1.10
                      , random >= 1.1
-                     , universum >= 0.2.1
+                     , universum
                      , wai-extra >= 3.0.19
                      , warp >= 3.2.9
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
@@ -123,7 +122,7 @@ test-suite cardano-report-server-test
                      , text
                      , time >= 1.6.0.1
                      , transformers
-                     , universum >= 0.2.1
+                     , universum
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   default-language:    Haskell2010

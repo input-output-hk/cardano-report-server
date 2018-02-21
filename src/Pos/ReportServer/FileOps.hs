@@ -123,8 +123,8 @@ storeCustomReport ::
     -> LByteString
     -> IO ()
 storeCustomReport holder reportInfo files zResp = do
-    let id = fromMaybe (error "invalid zendesk response") $ getTicketID zResp
-    let fullDirname = lhDir holder </> "custom-reports" </> show id
+    let ticketId = fromMaybe (error "invalid zendesk response") $ getTicketID zResp
+    let fullDirname = lhDir holder </> "custom-reports" </> show ticketId
     createDirectoryIfMissing True fullDirname
     let filesToWrite = ("payload.json", encodeUtf8 $ prettifyJson reportInfo) : files
     forM_ filesToWrite $ \(fname, content) ->

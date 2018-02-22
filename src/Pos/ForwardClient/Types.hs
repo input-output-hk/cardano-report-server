@@ -54,7 +54,9 @@ instance ToJSON CrTicket where
                                 , "uploads" .= case tAttachment of
                                     Just token -> V.singleton token
                                     Nothing    -> V.empty
-                                , "body" .= crEmail tCustomReport
+                                , "body" .= (crEmail tCustomReport
+                                         <> "\n"
+                                         <> crDescription tCustomReport)
                                 ]
                     ]
         ]

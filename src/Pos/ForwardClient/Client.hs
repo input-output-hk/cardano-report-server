@@ -38,13 +38,22 @@ agentOptsJson (Agent email token _) =
              & auth ?~ basicAuth (encodeUtf8 (email <> "/token")) (encodeUtf8 token)
 
 -- | Queries the zendesk api to get the agent's id
+-- | See https://developer.zendesk.com/rest_api/docs/core/users#show-the-currently-authenticated-user
 getAgentID :: Agent -> IO AgentId
 getAgentID agent = do
-    r <- getWith (agentOpts agent) (api agent ++ "users/me.json")
-    let tok =
-            fromMaybe (error "getAgentId: couldn't retrieve locale.id field") $
-            r ^? responseBody . key "user" . key "id" . _Integer
-    pure $ AgentId tok
+   let userUri = api agent ++ "users/me.json"
+   r <- getWith (agentOpts agent) userUri
+   let tok = fromMaybe
+                 ( error $ T.pack
+                     ( "getAgentId: Couldn't retrieve `id` field from `user`. "
+                       ++ "Check if the user does really exist in account `"
+                       ++ T.unpack (aAccount agent)
+                       ++ "`: "
+                       ++ userUri
+                     )
+                 )
+                 $ r ^? responseBody . key "user" . key "id" . _Integer
+   pure $ AgentId tok
 
 getTicketID :: LByteString -> Maybe Integer
 getTicketID r = r ^? key "ticket" . key "id" . _Integer

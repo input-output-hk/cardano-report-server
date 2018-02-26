@@ -119,7 +119,7 @@ reportApp ServerContext{..} req respond =
               pure zResp
           case res of
               Right maybeZDResp -> do
-                  let respText = fromMaybe mempty $ decodeUtf8 <$> maybeZDResp
+                  let respText = fromMaybe "Success" $ decodeUtf8 <$> maybeZDResp
                   respond (with200Response respText req)
               Left e -> do
                   let ex = displayException e

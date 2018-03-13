@@ -44,19 +44,23 @@ data CrTicket = CrTicket
 instance ToJSON CrTicket where
   toJSON CrTicket {..} =
         object [ "ticket" .=
-            object [ "type"          .= ("custom report" :: Text)
-                    , "subject"       .= crSubject tCustomReport
-                    , "description"   .= crDescription tCustomReport
-                    , "requester_id"  .= unAgentId tId
-                    , "assignee_id"   .= unAgentId tId
-                    , "comment"       .=
-                        object [ "type"    .= ("Attached logs" :: Text)
+            object [ "type"         .= ("custom report" :: Text)
+                    , "subject"     .= crSubject tCustomReport
+                    , "description" .= crDescription tCustomReport
+                    , "assignee_id" .= unAgentId tId
+                    , "comment"     .=
+                        object [ "type"     .= ("Attached logs" :: Text)
                                 , "uploads" .= case tAttachment of
                                     Just token -> V.singleton token
                                     Nothing    -> V.empty
-                                , "body" .= (crEmail tCustomReport
-                                         <> "\n"
-                                         <> crDescription tCustomReport)
+                                , "body"    .= (crEmail tCustomReport
+                                            <> "\n"
+                                            <> crDescription tCustomReport)
                                 ]
+                    , "requester"    .=
+                        object [ "name"  .= crEmail tCustomReport
+                               , "email" .= crEmail tCustomReport
+                               ]
+                    , "submitter_id" .= unAgentId tId
                     ]
         ]

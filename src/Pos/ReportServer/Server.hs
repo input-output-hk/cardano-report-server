@@ -124,7 +124,7 @@ reportApp ServerContext{..} req respond =
               Left e -> do
                   let ex = displayException e
                   hPutStrLn stderr ("An exception occurred: " <> ex)
-                  respond (with500Response (toText ex) req)
+                  respond (with500Response req)
         _  -> respond (with404Response req)
   where
     failPayload e =
@@ -136,8 +136,8 @@ with404Response = withStatus status404 "Not found"
 with200Response :: Text -> Request -> Response
 with200Response = withStatus status200
 
-with500Response :: Text -> Request -> Response
-with500Response = withStatus status500
+with500Response :: Request -> Response
+with500Response = withStatus status500 "500 Internal Server Error"
 
 notFound :: Application
 notFound req respond = respond (with404Response req)

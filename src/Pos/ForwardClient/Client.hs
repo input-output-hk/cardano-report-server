@@ -16,7 +16,7 @@ import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, head
                                responseBody)
 
 import           Pos.ForwardClient.Types (Agent (..), AgentId (..), CrTicket (..),
-                                          CustomReport (..), Token)
+                                          CustomReport (..), Token, getToken)
 import           Pos.ReportServer.Util (prettifyJson)
 
 data ZendeskParams = ZendeskParams
@@ -30,12 +30,12 @@ api agent = "https://" ++ T.unpack (aAccount agent) ++ ".zendesk.com/api/v2/"
 
 agentOpts :: Agent -> Options
 agentOpts (Agent email token _) =
-    defaults & auth ?~ basicAuth (encodeUtf8 (email <> "/token")) (encodeUtf8 token)
+    defaults & auth ?~ basicAuth (encodeUtf8 (email <> "/token")) (encodeUtf8 (getToken token))
 
 agentOptsJson :: Agent -> Options
 agentOptsJson (Agent email token _) =
     defaults & header "content-type" .~ ["application/json"]
-             & auth ?~ basicAuth (encodeUtf8 (email <> "/token")) (encodeUtf8 token)
+             & auth ?~ basicAuth (encodeUtf8 (email <> "/token")) (encodeUtf8 (getToken token))
 
 -- | Queries the zendesk api to get the agent's id
 -- | See https://developer.zendesk.com/rest_api/docs/core/users#show-the-currently-authenticated-user
@@ -60,7 +60,7 @@ getTicketID r = r ^? key "ticket" . key "id" . _Integer
 
 -- | Merges the log files, uploads them to Zendesk and returns the token from zendesk.
 -- The name of the upload is defaulted to logs.log
-uploadLogs :: Agent -> [(FilePath, LByteString)] -> IO Token
+uploadLogs :: Agent -> [(FilePath, LByteString)] -> IO Text
 uploadLogs agent [(fileName, content)] = do
     r <- postWith (agentOpts agent)
                   (api agent ++ "uploads.json?filename=" ++ fileName)

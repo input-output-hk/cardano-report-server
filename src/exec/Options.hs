@@ -18,7 +18,7 @@ import           System.FilePath ((</>))
 import           Universum
 
 import           Paths_cardano_report_server (version)
-import           Pos.ForwardClient.Types (Agent (..))
+import           Pos.ForwardClient.Types (AgentOptions (..))
 
 data Opts = Opts
     { port               :: Int
@@ -26,7 +26,7 @@ data Opts = Opts
     , sizeLimit          :: Word64
     , storeCustomReports :: Bool
 
-    , zdAgent            :: Maybe Agent
+    , zdAgent            :: Maybe AgentOptions
     , zdSendLogs         :: Bool
     } deriving (Show)
 
@@ -60,15 +60,15 @@ optsParser homeDir = do
 
     pure Opts {..}
 
-parseAgentOpts :: Parser Agent
-parseAgentOpts = Agent <$> email <*> token <*> account
+parseAgentOpts :: Parser AgentOptions
+parseAgentOpts = AgentOptions <$> email <*> tokenPath <*> account
   where
     email   = fromString <$> strOption
               (long "zd-email" <> metavar "STRING" <>
                help "Email to access zendesk")
-    token   = fromString <$> strOption
-              (long "zd-token" <> metavar "STRING" <>
-               help "Zendesk api token")
+    tokenPath = fromString <$> strOption
+              (long "zd-token-path" <> metavar "FILEPATH" <>
+               help "Path to a file with zendesk api token")
     account = fromString <$> strOption
               (long "zd-account" <> metavar "NAME" <>
                help "Zendesk account name (first part of account URL)")

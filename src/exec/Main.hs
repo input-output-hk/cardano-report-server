@@ -11,6 +11,7 @@ import qualified Network.Wai.Handler.Warp as Warp
 import           Network.Wai.Middleware.RequestLogger (logStdoutDev)
 
 import           Pos.ForwardClient.Client (ZendeskParams (..), getAgentID)
+import           Pos.ForwardClient.Types (mkAgent)
 import           Pos.ReportServer.FileOps (initHolder)
 import           Pos.ReportServer.Server (ServerContext (..), limitBodySize, reportServerApp)
 
@@ -30,7 +31,9 @@ main = do
     holder <- initHolder logsDir
     ptL "done"
 
-    scZendeskParams <- forM zdAgent $ \za -> do
+    agent <- mapM mkAgent zdAgent
+
+    scZendeskParams <- forM agent $ \za -> do
           pt "Authenticating in zendesk..."
           !agentID <- getAgentID za
           ptL "done"

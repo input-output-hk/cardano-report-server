@@ -53,7 +53,7 @@ data ReportType
                       -- ^ Description of the issue(s)
                     }
     -- ^ This is a custom user report coming directly from Daedalus.
-    | RAnalyze
+    | RAnalyse
     -- ^ This is a log analyzation instruction.
     deriving (Show, Eq)
 
@@ -82,7 +82,7 @@ instance FromJSON ReportType where
         String "misbehavior" -> RMisbehavior <$> v .: "isCritical" <*> v .: "reason"
         String "info" -> RInfo <$> v .: "description"
         String "customreport" -> RCustomReport <$> v .: "email" <*> v .: "subject" <*> v .: "problem"
-        String "analyze" -> pure RAnalyze
+        String "analyse" -> pure RAnalyse
         String unknown ->
             fail $ toString $ "ReportType: report 'type' " <> unknown <> " is unknown"
         other  -> typeMismatch "ReportType.type: should be string" other
@@ -109,7 +109,7 @@ instance ToJSON ReportType where
             , "subject" .= subject
             , "problem" .= problem
             ]
-    toJSON RAnalyze = object [ "type" .= idt "analyze"]
+    toJSON RAnalyse = object [ "type" .= idt "analyse"]
 
 supportedApps :: [Text]
 supportedApps = ["daedalus", "cardano-node", "mantis-node"]

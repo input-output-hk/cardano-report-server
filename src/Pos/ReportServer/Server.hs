@@ -97,7 +97,7 @@ reportApp ServerContext{..} req respond = do
             internalResponse <- liftAndCatchIO $ do
                 -- ^ All internal computations of data in this block
                 case rReportType payload of
-                    RAnalyze -> do
+                    RAnalyse -> do
                         when (length logFiles > 1) $
                             throwIO $ BadRequest "Multiple files not allowed for analysis."
                         pure $ analyse logFiles

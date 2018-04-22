@@ -62,7 +62,7 @@ genReportPath curTime ReportInfo{..} =
         RMisbehavior{}  -> "misbehavior"
         RInfo _         -> "info"
         RCustomReport{} -> error "repType is not ever called with RCustomReport"
-        RAnalyze        -> error "repType is not ever called with RAnalyze"
+        RAnalyse        -> error "repType is not ever called with RAnalyze"
 
 -- | Parses single line of index -- returns index id, time item created
 -- on and subdir name.

@@ -54,14 +54,15 @@ genReportPath curTime ReportInfo{..} =
         RCustomReport {} -> "custom-reports" </> date
         _                -> date </> repType </> time
   where
-    repType = case rReportType of
-                  RCrash _        -> "crash"
-                  RError _        -> "error"
-                  RMisbehavior{}  -> "misbehavior"
-                  RInfo _         -> "info"
-                  RCustomReport{} -> error "repType is not ever called with RCustomReport"
     time = formatTime defaultTimeLocale "%T_%Z_%q" curTime
     date = formatTime defaultTimeLocale "%F" curTime
+    repType = case rReportType of
+        RCrash _        -> "crash"
+        RError _        -> "error"
+        RMisbehavior{}  -> "misbehavior"
+        RInfo _         -> "info"
+        RCustomReport{} -> error "repType is not ever called with RCustomReport"
+        RAnalyze        -> error "repType is not ever called with RAnalyze"
 
 -- | Parses single line of index -- returns index id, time item created
 -- on and subdir name.

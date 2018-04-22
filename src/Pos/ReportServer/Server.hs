@@ -82,53 +82,55 @@ param key ps = case lookup key ps of
     Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
 reportApp :: ServerContext -> Application
-reportApp ServerContext{..} req respond =
+reportApp ServerContext{..} req respond = do
     case parseMethod (requestMethod req) of
         Right POST -> do
-          (!params, !files) <- bodyParse req
-          !(payload :: ReportInfo) <-
-              either failPayload pure . eitherDecodeStrict =<< param "payload" params
-          let logFiles = map (bimap decodeUtf8 fileContent) files
-          let cInfo = clientInfo req
-          let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson cInfo)
-          res <- liftAndCatchIO $ do
-              let allLogs = clientInfoFile : logFiles
-
-              -- Send data to zendesk if needed.
-              zResp <- case (scZendeskParams, rReportType payload) of
-                (Just zp, RCustomReport{..}) -> do
-                    let cr = CustomReport crEmail crSubject crProblem
-                    when (length logFiles > 1) $
-                       throwIO $ BadRequest "Multiple files not allowed with custom reports."
-                    response <- createTicket cr logFiles zp
-                    when (scStoreCustomReports) $
-                        storeCustomReport scLogsHolder payload allLogs response
-                    pure $ Just response
-                (Nothing, r@RCustomReport{}) -> do
-                    let e = "Ignoring custom report because zendesk " <>
-                              "is turned off: " <> show r
-                    putStrLn e
-                    pure $ Just e
-                _  -> pure Nothing
-
-              -- store report locally if it's not custom
-              case rReportType payload of
-                  RCustomReport{} -> pass
-                  _               -> addEntry scLogsHolder payload allLogs
-
-              pure zResp
-          case res of
-              Right maybeZDResp -> do
-                  let respText = fromMaybe "Success" $ decodeUtf8 <$> maybeZDResp
-                  respond (with200Response respText req)
-              Left e -> do
-                  let ex = displayException e
-                  hPutStrLn stderr ("An exception occurred: " <> ex)
-                  respond (with500Response req)
+        -- ^ Server only accepts POST requests
+            (!params, !files) <- bodyParse req
+            let failPayload e = throwM $ BadRequest $ "Couldn't manage to parse json payload: " <> T.pack e
+            !(payload :: ReportInfo) <- either failPayload pure . eitherDecodeStrict =<< param "payload" params
+            -- ^ Server parsed payload
+            let logFiles = map (bimap decodeUtf8 fileContent) files
+            let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson (clientInfo req))
+            let logsAndClientInfo = clientInfoFile : logFiles
+            -- ^ Server appends clientInfoFile to logFiles
+            internalResponse <- liftAndCatchIO $ do
+                -- ^ All internal computations of data in this block
+                case rReportType payload of
+                    RAnalyze -> do
+                        when (length logFiles > 1) $
+                            throwIO $ BadRequest "Multiple files not allowed for analysis."
+                        pure $ analyse logFiles
+                        -- ^ Server received a single file and an Analyze instruction
+                    cr@RCustomReport{} -> do
+                        when (length logFiles > 1) $
+                            throwIO $ BadRequest "Multiple files not allowed in custom reports."
+                        case scZendeskParams of
+                            Nothing -> throwIO $ BadRequest "Zendesk parameters missing."
+                            Just parameters -> do
+                                let RCustomReport{..} = cr
+                                let customReport = CustomReport crEmail crSubject crProblem
+                                zendeskResponse <- createTicket customReport logFiles parameters
+                                -- ^ Server has a response from zendesk
+                                when scStoreCustomReports $
+                                    storeCustomReport scLogsHolder
+                                                        payload
+                                                        logsAndClientInfo
+                                                        zendeskResponse
+                                -- ^ Server stores the custom report and zendesk's response if necessary
+                                pure $ Just zendeskResponse
+                    _ -> addEntry scLogsHolder payload logsAndClientInfo >> pure Nothing
+                    -- ^ Server stores every report other than [RAnalyze, RCustomReports]
+            case internalResponse of
+                Right response ->
+                    let serverResponse = fromMaybe "Success" $ decodeUtf8 <$> response
+                    in  respond (with200Response serverResponse req)
+                    -- ^ Internal computations succeded
+                Left e -> do
+                    hPutStrLn stderr ("An exception occured: " <> displayException e)
+                    respond (with500Response req)
+                    -- ^ Internal computations failed
         _  -> respond (with404Response req)
-  where
-    failPayload e =
-        throwM $ BadRequest $ "Couldn't manage to parse json payload: " <> T.pack e
 
 with404Response :: Request -> Response
 with404Response = withStatus status404 "Not found"
@@ -147,3 +149,5 @@ reportServerApp context =
     mapUrls $
         mount "report" (reportApp context) <|>
         mountRoot notFound
+
+analyse = error "Not yet implemented"

@@ -16,7 +16,7 @@ import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, head
                                responseBody)
 
 import           Pos.ForwardClient.Types (Agent (..), AgentId (..), CrTicket (..),
-                                          CustomReport (..), Token, getToken)
+                                          CustomReport (..), getToken)
 import           Pos.ReportServer.Util (prettifyJson)
 
 data ZendeskParams = ZendeskParams

@@ -14,17 +14,15 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 
 import qualified Text.ParserCombinators.Parsec   as P
-
 import           Text.Regex.PCRE ((=~))
 
-type Knowledgebase = [[BS.ByteString]]
-type Logs          = LByteString
+import           Pos.Analyser.Types
 
-grabLogs :: FilePath -> IO LByteString
+grabLogs :: FilePath -> IO Logs
 grabLogs path = BSL.readFile path
               <&> decompressLogs
 
-decompressLogs :: LByteString -> LByteString
+decompressLogs :: CompressedLogs -> Logs
 decompressLogs zipFile = zipFile
                        & toArchive
                        & zEntries
@@ -35,9 +33,10 @@ grabKnowledgebase :: FilePath -> IO Knowledgebase
 grabKnowledgebase path = do
     parseResult <- P.parseFromFile csvFile path
     case parseResult of
-        Left _ -> error $ "CSV Parsing failed."
-        Right (header:list) -> pure $ (fmap . fmap) encodeUtf8 list
+        Right (_:records) -> pure $ Knowledgebase $ (fmap . fmap) encodeUtf8 records
+        _      -> error $ "CSV Parsing failed."
 
-analyse :: LByteString -> Knowledgebase -> Knowledgebase
-analyse rawLogs base = let logs = decompressLogs rawLogs
-                       in  flip filter base $ \(h:_) -> logs =~ h
+analyse :: CompressedLogs -> Knowledgebase -> Knowledgebase
+analyse rawLogs Knowledgebase{..} =
+    let logs = decompressLogs rawLogs
+    in  Knowledgebase $ flip filter getKnowledgebase $ \(h:_) -> logs =~ h

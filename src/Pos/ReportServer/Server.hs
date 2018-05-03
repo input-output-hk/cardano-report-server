@@ -15,6 +15,7 @@ import           Universum
 import           Control.Exception (displayException, throwIO)
 import           Control.Monad.Trans.Control (MonadBaseControl)
 import           Data.Aeson (eitherDecodeStrict)
+import           Data.Aeson.Text (encodeToLazyText)
 import           Data.List (lookup)
 import qualified Data.Text as T
 import           Network.HTTP.Types (StdMethod (POST), parseMethod)
@@ -108,12 +109,10 @@ analyseApp ServerContext{..} req respond = do
                 _ -> throwIO $ BadRequest "Instruction not supported."
             -- ^ End of computations
             case internalResponse of
-                Right issues -> let serverResponse = T.intercalate "\n"
-                                                      [ T.intercalate ", " (decodeUtf8 <$> record) | record <- issues]
-                                in  do
-                                  putStrLn $ "Analysis Results:\n" <> serverResponse
-                                  respond (with200Response serverResponse req)
-                    -- ^ Internal computations succeded
+                Right knowledgebase ->
+                    respond (with200Response serverResponse req)
+                      where
+                        serverResponse = toStrict $ encodeToLazyText knowledgebase                    -- ^ Internal computations succeded
                 Left e -> do
                     hPutStrLn stderr ("An exception occured: " <> displayException e)
                     respond (with500Response req)

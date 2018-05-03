@@ -24,6 +24,7 @@ library
                      , Pos.ForwardClient.Types
                      , Pos.ForwardClient.Client
                      , Pos.Analyser.Analysis
+                     , Pos.Analyser.Types
                      , Paths_cardano_report_server
   build-depends:       aeson >= 0.11.2.1
                      , aeson-pretty >= 0.8.2

@@ -93,9 +93,8 @@ analyseApp ServerContext{..} req respond = do
             let failPayload e = throwM $ BadRequest $ "Couldn't manage to parse json payload: " <> T.pack e
             !(payload :: ReportInfo) <- either failPayload pure . eitherDecodeStrict =<< param "payload" params
             -- ^ Server parsed payload
-            let logFiles = map (bimap decodeUtf8 fileContent) files
+            let logFiles = map (bimap decodeUtf8 fileContent) files :: [(Text, LByteString)]
             let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson (clientInfo req))
-            let logsAndClientInfo = clientInfoFile : logFiles
             internalResponse <- liftAndCatchIO $ do
             -- ^ All internal computations of data in this block
               case rReportType payload of
@@ -103,7 +102,7 @@ analyseApp ServerContext{..} req respond = do
                     case logFiles of
                         [(_,contents)] -> do
                             base <- grabKnowledgebase "knowledgebase.csv"
-                            addEntry scLogsHolder payload logsAndClientInfo
+                            addEntry scLogsHolder payload [clientInfoFile]
                             pure $ analyse contents base
                         _ -> throwIO $ BadRequest "Multiple files not allowed for analysis."
                 _ -> throwIO $ BadRequest "Instruction not supported."

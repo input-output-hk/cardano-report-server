@@ -9,9 +9,8 @@ import Universum
 
 import           Codec.Archive.Zip (toArchive, zEntries, fromEntry)
 
-import           Data.CSV (csvFile)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import           Data.CSV (csvFile)
 
 import qualified Text.ParserCombinators.Parsec   as P
 import           Text.Regex.PCRE ((=~))

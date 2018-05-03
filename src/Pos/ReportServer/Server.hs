@@ -35,6 +35,8 @@ import           Pos.ReportServer.FileOps (LogsHolder, addEntry, storeCustomRepo
 import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..))
 import           Pos.ReportServer.Util (prettifyJson)
 
+import           Pos.Analyser.Analysis (grabKnowledgebase, analyse)
+
 data ServerContext = ServerContext
     { scZendeskParams      :: !(Maybe ZendeskParams) -- ^ If Nothing, zd is turned off
     , scStoreCustomReports :: !Bool -- ^ If we store logs on custom
@@ -81,6 +83,43 @@ param key ps = case lookup key ps of
     Just val -> return val
     Nothing  -> throwIO $ ParameterNotFound (decodeUtf8 key)
 
+analyseApp :: ServerContext -> Application
+analyseApp ServerContext{..} req respond = do
+    case parseMethod (requestMethod req) of
+        Right POST -> do
+        -- ^ Server only accepts POST requests
+            (!params, !files) <- bodyParse req
+            let failPayload e = throwM $ BadRequest $ "Couldn't manage to parse json payload: " <> T.pack e
+            !(payload :: ReportInfo) <- either failPayload pure . eitherDecodeStrict =<< param "payload" params
+            -- ^ Server parsed payload
+            let logFiles = map (bimap decodeUtf8 fileContent) files
+            let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson (clientInfo req))
+            let logsAndClientInfo = clientInfoFile : logFiles
+            internalResponse <- liftAndCatchIO $ do
+            -- ^ All internal computations of data in this block
+              case rReportType payload of
+                RAnalyse -> do
+                    case logFiles of
+                        [(_,contents)] -> do
+                            base <- grabKnowledgebase "knowledgebase.csv"
+                            addEntry scLogsHolder payload logsAndClientInfo
+                            pure $ analyse contents base
+                        _ -> throwIO $ BadRequest "Multiple files not allowed for analysis."
+                _ -> throwIO $ BadRequest "Instruction not supported."
+            -- ^ End of computations
+            case internalResponse of
+                Right issues -> let serverResponse = T.intercalate "\n"
+                                                      [ T.intercalate ", " (decodeUtf8 <$> record) | record <- issues]
+                                in  do
+                                  putStrLn $ "Analysis Results:\n" <> serverResponse
+                                  respond (with200Response serverResponse req)
+                    -- ^ Internal computations succeded
+                Left e -> do
+                    hPutStrLn stderr ("An exception occured: " <> displayException e)
+                    respond (with500Response req)
+                    -- ^ Internal computations failed
+        _  -> respond (with404Response req)
+
 reportApp :: ServerContext -> Application
 reportApp ServerContext{..} req respond = do
     case parseMethod (requestMethod req) of
@@ -95,13 +134,8 @@ reportApp ServerContext{..} req respond = do
             let logsAndClientInfo = clientInfoFile : logFiles
             -- ^ Server appends clientInfoFile to logFiles
             internalResponse <- liftAndCatchIO $ do
-                -- ^ All internal computations of data in this block
+            -- ^ All internal computations of data in this block
                 case rReportType payload of
-                    RAnalyse -> do
-                        when (length logFiles > 1) $
-                            throwIO $ BadRequest "Multiple files not allowed for analysis."
-                        pure $ analyse logFiles
-                        -- ^ Server received a single file and an Analyze instruction
                     cr@RCustomReport{} -> do
                         when (length logFiles > 1) $
                             throwIO $ BadRequest "Multiple files not allowed in custom reports."
@@ -148,6 +182,5 @@ reportServerApp :: ServerContext -> Application
 reportServerApp context =
     mapUrls $
         mount "report" (reportApp context) <|>
+        mount "analyse" (analyseApp context) <|>
         mountRoot notFound
-
-analyse = error "Not yet implemented"

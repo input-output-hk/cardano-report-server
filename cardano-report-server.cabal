@@ -23,7 +23,7 @@ library
                      , Pos.ReportServer.Util
                      , Pos.ForwardClient.Types
                      , Pos.ForwardClient.Client
-
+                     , Pos.Analyser.Analysis
                      , Paths_cardano_report_server
   build-depends:       aeson >= 0.11.2.1
                      , aeson-pretty >= 0.8.2
@@ -55,6 +55,9 @@ library
                      , warp >= 3.2.9
                      , wreq
                      , lens-aeson
+                     , zip-archive
+                     , regex-pcre
+                     , MissingH
   ghc-options:         -Wall
   default-language:    Haskell2010
   default-extensions:  GeneralizedNewtypeDeriving

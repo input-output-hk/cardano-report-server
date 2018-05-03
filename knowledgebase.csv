@@ -1,0 +1,14 @@
+Detected log string,Issue Name,Explanation,Recommended fix
+useless for the following reason,TimeSync,Synchronization Problem,Synchronize your computer's time
+DBMalformed,DBError,Local block data is corrupted,Delete the content of the DB-1.0 folder.
+signalProcess: permission denied,StaleLockFile,Launching node without admin rights,Launch the application with admin rights.
+No such file or directory,FileNotFound,File missing,Reinstall Daedalus and run the application.
+resource exhausted (No space left on device),ShortStorage,Not enough space on hard drive to store block data,Create more disk space on your computer.
+returned empty list,NetworkError,Firewall is blocking the connection,Reconfigure firewall/router or change your ISP.
+irrelevant to given wallet,BalanceError,Daedalus shows wrong Ada amount,There's no solution yet. Send us a custom report containing your log files for help.
+Network.Socket.recvBuf: resource vanished,ResourceVanished,Network error,ISP related issue.
+IO error: Failed to create dir,UserNameError,User is using non-latin characters for username,Change your PC's username to latin-characters.
+open.lock: Locked by,StaleLockFile,open.lock file is corrupted due to improper shutdown,Application was improperly shutdown. Delete the file 'open.lock'.
+Network.Socket.recvBuf: failed (No error),ConnectionRefused,Firewall is blocking the connection,Reconfigure firewall/router or change your ISP.
+The system cannot find the file specified,DBPath,Daedalus cannot find certain files,There's no solution yet. Send us a custom report containing your log files for help.
+IO error: Can not get size for,CannotGetDBSize,Couldn't pack log files,There's no solution yet. Send us a custom report containing your log files for help.

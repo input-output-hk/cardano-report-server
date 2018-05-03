@@ -20,6 +20,7 @@ import           Data.Version (Version (..), parseVersion, showVersion)
 import           Text.ParserCombinators.ReadP (readP_to_S)
 
 -- | Type of report.
+
 data ReportType
     = RCrash Int
     -- ^ This type is used only to report crash of application.

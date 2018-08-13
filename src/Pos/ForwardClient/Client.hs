@@ -160,10 +160,10 @@ createTicketPure = prettifyJson $ CrTicket agentId customReport Nothing customFi
     _zendeskParams = ZendeskParams agent agentId False
 
     customProductField :: CustomField
-    customProductField = CustomField 114100735553 "Cardano Wallet"
+    customProductField = CustomField 114100735553 "daedalus_wallet-mainet"
 
     customProductVersionField :: CustomField
-    customProductVersionField = CustomField 360007053414 "Testnet Daedalus 13.24+Cardano 9.2"
+    customProductVersionField = CustomField 360007053414 "daedalus_0.11.0_cardano_1.3.0"
 
     customFields :: [CustomField]
     customFields = [customProductField, customProductVersionField]

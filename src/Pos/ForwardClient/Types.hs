@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 -- | Types for sending data to zendesk.
 module Pos.ForwardClient.Types
@@ -6,15 +7,17 @@ module Pos.ForwardClient.Types
     , Agent(..)
     , AgentOptions(..)
     , Logs
-    , Token
+    , Token (..)
     , mkAgent
     , getToken
     , AgentId(..)
+    , CustomField (..)
     , CrTicket(..)
     ) where
 
 import           Universum
 
+import qualified Data.Text as T
 import           Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Vector as V
 
@@ -43,13 +46,12 @@ newtype Token = Token Text deriving Show
 -- | Smart constructor for Token
 mkAgent :: AgentOptions -> IO Agent
 mkAgent ao = do
-  token <- Token <$> readFile (aoApiToken ao)
+  token <- Token . T.filter (/= '\n') <$> readFile (aoApiToken ao)
   return $ Agent
-    { aEmail = (aoEmail ao)
-    , apiToken = token
-    , aAccount = (aoAccount ao)
+    { aEmail    = (aoEmail ao)
+    , apiToken  = token
+    , aAccount  = (aoAccount ao)
     }
-
 
 getToken :: Token -> Text
 getToken (Token token) = token
@@ -58,10 +60,24 @@ newtype AgentId = AgentId
     { unAgentId :: Integer
     } deriving (Show)
 
+-- https://developer.zendesk.com/rest_api/docs/core/tickets#setting-custom-field-values
+data CustomField = CustomField
+    { id            :: !Int
+    , value         :: !Text
+    } deriving (Show)
+
+instance ToJSON CustomField where
+    toJSON CustomField {..} =
+        object
+            [ "id" .= id
+            , "value" .= value
+            ]
+
 data CrTicket = CrTicket
     { tId           :: !AgentId
     , tCustomReport :: !CustomReport
     , tAttachment   :: !(Maybe Text)
+    , tCustomFields :: ![CustomField]
     } deriving (Show)
 
 instance ToJSON CrTicket where
@@ -84,6 +100,9 @@ instance ToJSON CrTicket where
                         object [ "name"  .= crEmail tCustomReport
                                , "email" .= crEmail tCustomReport
                                ]
-                    , "submitter_id" .= unAgentId tId
+                    , "submitter_id"  .= unAgentId tId
+                    -- yeah, this is pretty weird.
+                    , "fields"        .= tCustomFields
+                    , "custom_fields" .= tCustomFields
                     ]
         ]

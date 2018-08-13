@@ -23,17 +23,19 @@ import           Network.Wai (Application, Middleware, Request, RequestBodyLengt
                               requestBodyLength, requestHeaders, requestMethod, responseLBS)
 import           Network.Wai.Parse (File, Param, defaultParseRequestBodyOptions, fileContent,
                                     lbsBackEnd, parseRequestBodyEx)
-import           Network.Wai.UrlMap (mapUrls, mount, mountRoot)
+import           Network.Wai.UrlMap (mapUrls, mount, mount', mountRoot)
 import           System.IO (hPutStrLn)
 
-import           Pos.ForwardClient.Client (ZendeskParams (..), createTicket)
+import           Pos.ForwardClient.Client (ZendeskParams (..), createPostTicket, createTicket)
 import           Pos.ForwardClient.Types (CustomReport (..))
 import           Pos.ReportServer.ClientInfo (clientInfo)
 import           Pos.ReportServer.Exception (ReportServerException (BadRequest, ParameterNotFound),
                                              tryAll)
 import           Pos.ReportServer.FileOps (LogsHolder, addEntry, storeCustomReport)
-import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..))
+import           Pos.ReportServer.Report (ReportInfo (..), ReportType (..), V1ReportInfo (..),
+                                          generateProductVersion)
 import           Pos.ReportServer.Util (prettifyJson)
+
 
 data ServerContext = ServerContext
     { scZendeskParams      :: !(Maybe ZendeskParams) -- ^ If Nothing, zd is turned off
@@ -85,30 +87,41 @@ reportApp :: ServerContext -> Application
 reportApp ServerContext{..} req respond =
     case parseMethod (requestMethod req) of
         Right POST -> do
+
           (!params, !files) <- bodyParse req
           !(payload :: ReportInfo) <-
               either failPayload pure . eitherDecodeStrict =<< param "payload" params
+
           let logFiles = map (bimap decodeUtf8 fileContent) files
           let cInfo = clientInfo req
           let clientInfoFile = ("client.info", encodeUtf8 $ prettifyJson cInfo)
+
           res <- liftAndCatchIO $ do
               let allLogs = clientInfoFile : logFiles
 
               -- Send data to zendesk if needed.
               zResp <- case (scZendeskParams, rReportType payload) of
+
                 (Just zp, RCustomReport{..}) -> do
+
                     let cr = CustomReport crEmail crSubject crProblem
+
                     when (length logFiles > 1) $
                        throwIO $ BadRequest "Multiple files not allowed with custom reports."
+
                     response <- createTicket cr logFiles zp
+
                     when (scStoreCustomReports) $
                         storeCustomReport scLogsHolder payload allLogs response
+
                     pure $ Just response
+
                 (Nothing, r@RCustomReport{}) -> do
                     let e = "Ignoring custom report because zendesk " <>
                               "is turned off: " <> show r
                     putStrLn e
                     pure $ Just e
+
                 _  -> pure Nothing
 
               -- store report locally if it's not custom
@@ -117,6 +130,7 @@ reportApp ServerContext{..} req respond =
                   _               -> addEntry scLogsHolder payload allLogs
 
               pure zResp
+
           case res of
               Right maybeZDResp -> do
                   let respText = fromMaybe "Success" $ decodeUtf8 <$> maybeZDResp
@@ -125,10 +139,79 @@ reportApp ServerContext{..} req respond =
                   let ex = displayException e
                   hPutStrLn stderr ("An exception occurred: " <> ex)
                   respond (with500Response req)
+
         _  -> respond (with404Response req)
   where
     failPayload e =
         throwM $ BadRequest $ "Couldn't manage to parse json payload: " <> T.pack e
+
+
+-- | The new version report server. For now it's a stupid copy-and-paste, requires
+-- substantial refactoring to remove duplication.
+reportV1App :: ServerContext -> Application
+reportV1App ServerContext{..} req respond =
+    case parseMethod (requestMethod req) of
+        Right POST -> do
+
+          (!params, !files) <- bodyParse req
+          payload <- either failPayload pure . eitherDecodeStrict =<< param "payload" params
+
+          let logFiles = map (bimap decodeUtf8 fileContent) files
+
+          res <- liftAndCatchIO $ handleV1ReportEndpoint payload logFiles scZendeskParams
+
+          case res of
+              Right maybeZDResp -> do
+                  let respText = fromMaybe "Success" $ decodeUtf8 <$> maybeZDResp
+                  respond (with200Response respText req)
+              Left e -> do
+                  let ex = displayException e
+                  hPutStrLn stderr ("An exception occurred: " <> ex)
+                  respond (with500Response req)
+
+        _  -> respond (with404Response req)
+  where
+    failPayload e =
+        throwM $ BadRequest $ "Couldn't manage to parse json payload: " <> T.pack e
+
+
+-- | The handle for the new report endpoint.
+handleV1ReportEndpoint
+    :: V1ReportInfo
+    -> [(FilePath, LByteString)]
+    -> Maybe ZendeskParams
+    -> IO (Maybe LByteString)
+handleV1ReportEndpoint payload logFiles scZendeskParams = do
+
+    -- Send data to zendesk if needed.
+    zResp <- case (scZendeskParams, riReportType payload) of
+
+      (Just zendeskParams, RCustomReport{..}) -> do
+          -- For the product and product
+          let productInfo       = riProduct payload
+          let productVersion    = generateProductVersion payload
+          let network           = riNetwork payload
+
+          -- No point in this.
+          let cr              = CustomReport crEmail crSubject crProblem
+
+          when (length logFiles > 1) $
+             throwIO $ BadRequest "Multiple files not allowed with custom reports."
+
+          -- Here we create a ticket and post it to Zendesk.
+          response <- createPostTicket cr logFiles zendeskParams productInfo productVersion network
+
+          pure $ Just response
+
+      (Nothing, r@RCustomReport{}) -> do
+          let e = "Ignoring custom report because zendesk " <>
+                    "is turned off: " <> show r
+          putStrLn e
+          pure $ Just e
+
+      _  -> pure Nothing
+
+    pure zResp
 
 with404Response :: Request -> Response
 with404Response = withStatus status404 "Not found"
@@ -145,5 +228,9 @@ notFound req respond = respond (with404Response req)
 reportServerApp :: ServerContext -> Application
 reportServerApp context =
     mapUrls $
-        mount "report" (reportApp context) <|>
-        mountRoot notFound
+        mount "report"                  v0App
+    <|> mount' ["api", "v1", "report"]  v1App
+    <|> mountRoot notFound
+  where
+    v0App = reportApp context
+    v1App = reportV1App context

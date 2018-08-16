@@ -49,5 +49,79 @@ curl https://ACCOUNT.zendesk.com/api/v2/users/create_or_update.json \
   -H "Content-Type: application/json" -X POST \
   -v -u 'EMAIL/token:BASE64_TOKEN'
 ```
-
+How it works 
+------------
+After startup Cardano-Report-Server inititalizes the Log holder directory
+with given options, additionaly creates the directory if not present. Then
+it makes a Zendesk-Agent which contains all the necessary details about the
+zendesk account and then the agent authenticates with zendesk. After that it
+creates a `serverContext` which contains the information about the server:
+```
+data ServerContext = ServerContext
+    { scZendeskParams      :: !(Maybe ZendeskParams) -- ^ If Nothing, zd is turned off
+    , scStoreCustomReports :: !Bool -- ^ If we store logs on custom
+                                   -- report. This will only be used
+                                   -- if zendesk integration is on,
+                                   -- because we store response too.
+    , scLogsHolder         :: !LogsHolder
+    }
+```
+Then it launches the server application which sends Log data to zendesk or
+stores locally if required. Cardano-Report-Server logs the following report:
+```
+-- | Type of report.
+data ReportType
+    = RCrash Int
+    -- ^ This type is used only to report crash of application.
+    | RError Text
+    -- ^ The type of report used when a local error (most likely
+    -- assertion violation or anything else that indicates a bug)
+    -- happens. «Local» means that error most likely affects only one
+    -- node for which this error happened.
+    | RMisbehavior { rmIsCritical  :: Bool
+                   -- ^ Whether misbehavior can break the system and
+                   -- must be addressed ASAP.  Example of critical
+                   -- misbehavior: chain quality is closed to
+                   -- 50%. Example of non-critical misbehavior: fork
+                   -- happened in bootstrap era. The latter should be
+                   -- investigated, but doesn't mean that the system's
+                   -- operability is threatened.
+                   , rmDescription :: Text
+                   -- ^ What exactly is suspicious\/wrong.
+                    }
+    -- ^ This type of report indicates global problems which most
+    -- likely affect all nodes.
+    | RInfo Text
+    -- ^ The type of report used to send statistical or any other
+    -- useful information and doesn't indicate anything
+    -- bad\/strange\/suspicious.
+    | RCustomReport { crEmail :: Text
+                      -- ^ The user's email address
+                    , crSubject :: Text
+                      -- ^ The title of the report
+                    , crProblem :: Text
+                      -- ^ Description of the issue(s)
+                    }
+    -- ^ This is a custom user report coming directly from Daedalus.
+```
+Additionally Cardano-Report-Server sends this metadata along with the report:
+```
+-- | Metadata sent with report.
+data ReportInfo = ReportInfo
+    { rApplication :: Text
+      -- ^ Application name, e.g. "cardano-explorer" or "deadalus".
+    , rVersion     :: Version
+      -- ^ Application version.
+    , rBuild       :: Text
+      -- ^ Build information.
+    , rOS          :: Text
+      -- ^ OS information.
+    , rDate        :: UTCTime
+      -- ^ Date report was created on.
+    , rMagic       :: Int32
+      -- ^ Cluster magic.
+    , rReportType  :: ReportType
+      -- ^ Type of report.
+    }
+```
 [1]: https://developer.zendesk.com/rest_api/docs/core/users#create-user

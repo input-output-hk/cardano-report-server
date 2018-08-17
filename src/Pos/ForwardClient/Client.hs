@@ -3,8 +3,10 @@
 module Pos.ForwardClient.Client
     ( getAgentID
     , createTicket
+    , createPostTicket
     , getTicketID
     , ZendeskParams(..)
+    , createTicketPure
     ) where
 
 import           Universum
@@ -15,8 +17,11 @@ import qualified Data.Text as T
 import           Network.Wreq (Options, auth, basicAuth, defaults, getWith, header, postWith,
                                responseBody)
 
-import           Pos.ForwardClient.Types (Agent (..), AgentId (..), CrTicket (..),
-                                          CustomReport (..), Token, getToken)
+import           Pos.ForwardClient.Types (Agent (..), AgentId (..), CrTicket (..), CustomField (..),
+                                          CustomReport (..), Token (..), getToken)
+import           Pos.ReportServer.Report (IOHKProduct (..), Network (..), ProductVersion (..),
+                                          showNetwork)
+
 import           Pos.ReportServer.Util (prettifyJson)
 
 data ZendeskParams = ZendeskParams
@@ -43,6 +48,7 @@ getAgentID :: Agent -> IO AgentId
 getAgentID agent = do
    let userUri = api agent ++ "users/me.json"
    r <- getWith (agentOpts agent) userUri
+   --putStrLn $ r ^. responseBody
    let tok = fromMaybe
                  ( error $ T.pack
                      ( "getAgentId: Couldn't retrieve `id` field from `user`. "
@@ -69,9 +75,10 @@ uploadLogs agent [(fileName, content)] = do
     pure tok
 uploadLogs _ _ = error "Multiple files not allowed."
 
+
 -- | Creates ticket and uploads logs.
-createTicket ::
-       CustomReport
+createTicket
+    :: CustomReport
     -> [(FilePath, LByteString)]
     -> ZendeskParams
     -> IO LByteString
@@ -80,9 +87,85 @@ createTicket cr logs ZendeskParams {..} = do
         if zpSendLogs && length logs > 0
         then Just <$> uploadLogs zpAgent logs
         else pure Nothing
-    let ticket = CrTicket zpAgentId cr attachToken
+    let ticket = CrTicket zpAgentId cr attachToken []
     putStrLn $ prettifyJson ticket
     r <- postWith (agentOptsJson zpAgent)
                   (api zpAgent ++ "tickets.json")
                   (encodeUtf8 (prettifyJson ticket) :: ByteString)
     pure $ r ^. responseBody
+
+-- | Creates ticket and uploads logs, new version.
+createPostTicket
+    :: CustomReport
+    -> [(FilePath, LByteString)]
+    -> ZendeskParams
+    -> IOHKProduct
+    -> ProductVersion
+    -> Network
+    -> IO LByteString
+createPostTicket cr logs ZendeskParams{..} iohkProduct productVersion network = do
+    attachToken <-
+        if zpSendLogs && length logs > 0
+            then Just <$> uploadLogs zpAgent logs
+            else pure Nothing
+    -- TODO(ks): Left to implement!
+    let customFields =
+            [ CustomField 114100735553 validProductNetwork
+            , CustomField 360007053414 validProductVersion
+            ]
+    let ticket = CrTicket zpAgentId cr attachToken customFields
+
+    putTextLn "Sent to Zendesk:"
+    putStrLn $ prettifyJson ticket
+
+    r <- postWith (agentOptsJson zpAgent)
+                  (api zpAgent ++ "tickets.json")
+                  (encodeUtf8 (prettifyJson ticket) :: ByteString)
+
+    putTextLn "Got response from Zendesk:"
+    putStrLn $ r ^. responseBody
+
+    pure $ r ^. responseBody
+  where
+    validProductNetwork = validProduct <> "-" <> showNetwork network
+    validProduct        = toValidTag $ getIOHKProduct iohkProduct
+
+    validProductVersion = toValidTag $ getProductVersion productVersion
+
+    toValidTag :: Text -> Text
+    toValidTag = T.intercalate "_" . words . T.toLower
+
+-- For trying it out. This is what we send to Zendesk.
+-- putStrLn createTicketPure
+createTicketPure :: Text
+createTicketPure = prettifyJson $ CrTicket agentId customReport Nothing customFields
+  where
+
+    customReport :: CustomReport
+    customReport = CustomReport "cardano-report-server-test@iohk.io" "This is a test for cardano report server" "Testing"
+
+    _logs :: [(FilePath, LByteString)]
+    _logs = []
+
+    agentId :: AgentId
+    agentId = AgentId 360607889193
+
+    token :: Token
+    token = Token . fromString $ replicate 20 '0'
+
+    agent :: Agent
+    agent = Agent "kristijan.saric@iohk.io" token "account"
+
+    _zendeskParams :: ZendeskParams
+    _zendeskParams = ZendeskParams agent agentId False
+
+    customProductField :: CustomField
+    customProductField = CustomField 114100735553 "daedalus_wallet-mainet"
+
+    customProductVersionField :: CustomField
+    customProductVersionField = CustomField 360007053414 "daedalus_0.11.0_cardano_1.3.0"
+
+    customFields :: [CustomField]
+    customFields = [customProductField, customProductVersionField]
+
+

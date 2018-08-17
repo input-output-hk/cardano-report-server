@@ -68,7 +68,7 @@ liftAndCatchIO
 liftAndCatchIO = tryAll . liftIO
 
 withStatus :: Status -> T.Text -> Request -> Response
-withStatus status msg req = responseLBS status (requestHeaders req) (encodeUtf8 msg)
+withStatus status msg req = responseLBS status mempty (encodeUtf8 msg)
 
 -- | Gets the list of the uploaded files.
 bodyParse :: Request -> IO ([Param], [File LByteString])

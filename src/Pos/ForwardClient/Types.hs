@@ -84,6 +84,7 @@ instance ToJSON CrTicket where
   toJSON CrTicket {..} =
         object [ "ticket" .=
             object [ "type"         .= ("custom report" :: Text)
+                    , "status"      .= ("new" :: Text)
                     , "subject"     .= crSubject tCustomReport
                     , "description" .= crDescription tCustomReport
                     , "assignee_id" .= unAgentId tId

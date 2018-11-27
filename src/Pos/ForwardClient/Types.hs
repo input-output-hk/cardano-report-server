@@ -87,7 +87,6 @@ instance ToJSON CrTicket where
                     , "status"      .= ("new" :: Text)
                     , "subject"     .= crSubject tCustomReport
                     , "description" .= crDescription tCustomReport
-                    , "assignee_id" .= unAgentId tId
                     , "comment"     .=
                         object [ "type"     .= ("Attached logs" :: Text)
                                 , "uploads" .= case tAttachment of
